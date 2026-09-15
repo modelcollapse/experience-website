@@ -245,6 +245,45 @@
             background: #fff;
             color: #000;
         }
+        #sketch-loader {
+            position: absolute;
+            inset: 0;
+            z-index: 4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            opacity: 0;
+            visibility: hidden;
+            background: rgba(0, 0, 0, 0.46);
+            color: #fff;
+            transition: opacity 0.6s ease, visibility 0.6s ease;
+        }
+        #sketch-loader.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        #sketch-loader-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            padding: 18px 22px;
+            background: rgba(0, 0, 0, 0.44);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        #sketch-loader-number {
+            font-size: 0.84rem;
+            font-weight: 700;
+            opacity: 0.72;
+        }
+        #sketch-loader-title {
+            font-size: 1rem;
+            font-weight: 650;
+        }
         @media (max-width: 520px) {
             #control-panel {
                 left: 12px;
@@ -327,6 +366,12 @@
     <div id="setup-overlay">
         <button id="start-btn">Enter Experience</button>
     </div>
+    <div id="sketch-loader" aria-live="polite">
+        <div id="sketch-loader-content">
+            <div id="sketch-loader-number">001</div>
+            <div id="sketch-loader-title">Fade</div>
+        </div>
+    </div>
 
     <!-- Minimal Floating Top-Left UI -->
     <div id="control-panel">
@@ -340,6 +385,7 @@
         <button class="journal-btn active" data-entry="001" title="001 Original ambient mix">001</button>
         <button class="journal-btn" data-entry="002" title="002 Pixel reveal brush">002</button>
         <button class="journal-btn" data-entry="003" title="003 Concentric image masks">003</button>
+        <button class="journal-btn" data-entry="004" title="004 Placeholder">004</button>
     </div>
 
     <script>
@@ -362,7 +408,15 @@
         const SKETCH_AUDIO_MODE = {
             "001": "ambient-cycle",
             "002": "hold",
-            "003": "hold"
+            "003": "hold",
+            "004": "hold"
+        };
+
+        const SKETCH_LABELS = {
+            "001": "Fade",
+            "002": "Pixel Reveal",
+            "003": "Concentric Masks",
+            "004": "Placeholder"
         };
 
         // Core Systems Configuration
@@ -380,8 +434,6 @@
         let revealTopImage = null;
         let revealReady = false;
         let revealCycleIndex = 0;
-        let revealProgress = 0;
-        let revealIsAdvancing = false;
         let circleImage = null;
         let circleImageIndex = 0;
         let circlePointerX = 0;
@@ -389,9 +441,9 @@
         let circleTargetX = 0;
         let circleTargetY = 0;
         let circleAnimationId = null;
+        let loaderTimeout = null;
         const FADE_DURATION = 4.0; // Audio crossfade overlap length (seconds)
         const DRIFT_CLASSES = ['drift-a', 'drift-b', 'drift-c'];
-        const REVEAL_ADVANCE_THRESHOLD = 0.8;
 
         // Inject background elements into standard browser template DOM
         const bgContainer = document.getElementById('bg-container');
@@ -409,6 +461,9 @@
         const revealCtx = revealCanvas.getContext('2d', { alpha: true });
         const revealUnderCtx = revealUnderCanvas.getContext('2d', { alpha: true });
         const circleMaskCtx = circleMaskCanvas.getContext('2d', { alpha: true });
+        const sketchLoader = document.getElementById('sketch-loader');
+        const sketchLoaderNumber = document.getElementById('sketch-loader-number');
+        const sketchLoaderTitle = document.getElementById('sketch-loader-title');
 
         function loadImage(src) {
             return new Promise((resolve, reject) => {
@@ -495,7 +550,6 @@
                 revealImageStack = loadedImages.slice(0, Math.max(2, loadedImages.length - 1));
                 revealTopImage = loadedImages[loadedImages.length - 1];
                 revealReady = true;
-                revealProgress = 0;
                 renderRevealStack();
                 animateNewRevealSurface();
             } catch (error) {
@@ -551,7 +605,6 @@
             const basePixel = (7 + Math.random() * 12) * dpr;
             const x = (event.clientX - rect.left) * dpr;
             const y = (event.clientY - rect.top) * dpr;
-            let revealedArea = 0;
 
             revealCtx.globalCompositeOperation = 'destination-out';
             for (let px = x - brushRadius; px <= x + brushRadius; px += basePixel) {
@@ -568,25 +621,20 @@
                         const jitterY = (Math.random() - 0.5) * basePixel * 1.5;
                         revealCtx.globalAlpha = 0.24 + edgeFalloff * (0.5 + Math.random() * 0.26);
                         revealCtx.fillRect(px + jitterX, py + jitterY, width, height);
-                        revealedArea += width * height * revealCtx.globalAlpha;
                     }
                 }
             }
             revealCtx.globalAlpha = 1;
-            trackRevealProgress(revealedArea);
         }
 
-        function trackRevealProgress(revealedArea) {
-            if (revealIsAdvancing || revealedArea <= 0) return;
-            const canvasArea = revealCanvas.width * revealCanvas.height;
-            revealProgress = Math.min(1, revealProgress + revealedArea / canvasArea);
-            if (revealProgress >= REVEAL_ADVANCE_THRESHOLD) {
-                revealIsAdvancing = true;
-                setTimeout(async () => {
-                    await prepareRevealStack(true);
-                    revealIsAdvancing = false;
-                }, 900);
-            }
+        function showSketchLoader(entry) {
+            sketchLoaderNumber.textContent = entry;
+            sketchLoaderTitle.textContent = SKETCH_LABELS[entry] || 'Placeholder';
+            sketchLoader.classList.add('visible');
+            clearTimeout(loaderTimeout);
+            loaderTimeout = setTimeout(() => {
+                sketchLoader.classList.remove('visible');
+            }, 1150);
         }
 
         async function prepareCircleMasks(advance = false) {
@@ -669,9 +717,11 @@
             document.body.classList.toggle('entry-001', entry === '001');
             document.body.classList.toggle('entry-002', entry === '002');
             document.body.classList.toggle('entry-003', entry === '003');
+            document.body.classList.toggle('entry-004', entry === '004');
             document.querySelectorAll('.journal-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.entry === entry);
             });
+            showSketchLoader(entry);
 
             if (entry === '002') {
                 revealUnderCanvas.classList.add('active');
@@ -684,14 +734,20 @@
                 revealCanvas.classList.remove('active');
                 circleMaskCanvas.classList.add('active');
                 revealReady = false;
-                revealIsAdvancing = false;
                 prepareCircleMasks();
+            } else if (entry === '004') {
+                revealUnderCanvas.classList.remove('active');
+                revealCanvas.classList.remove('active');
+                circleMaskCanvas.classList.remove('active');
+                revealReady = false;
+                if (circleAnimationId) cancelAnimationFrame(circleAnimationId);
+                circleAnimationId = null;
+                transitionImage();
             } else {
                 revealUnderCanvas.classList.remove('active');
                 revealCanvas.classList.remove('active');
                 circleMaskCanvas.classList.remove('active');
                 revealReady = false;
-                revealIsAdvancing = false;
                 if (circleAnimationId) cancelAnimationFrame(circleAnimationId);
                 circleAnimationId = null;
                 transitionImage();
@@ -779,6 +835,7 @@
             
             document.getElementById('control-panel').classList.add('visible');
             document.getElementById('journal-panel').classList.add('visible');
+            showSketchLoader(activeEntry);
             
             triggerNextCycle();
             setInterval(() => {
