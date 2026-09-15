@@ -112,6 +112,7 @@
                 opacity: 0.38;
             }
         }
+        #circle-mask-canvas,
         #reveal-under-canvas,
         #reveal-canvas {
             position: absolute;
@@ -130,11 +131,15 @@
         #reveal-canvas {
             z-index: 2;
         }
+        #circle-mask-canvas {
+            z-index: 2;
+        }
         #reveal-canvas.refreshing {
             animation: revealSurfaceIn 1.6s ease both;
         }
         #reveal-under-canvas.active,
-        #reveal-canvas.active {
+        #reveal-canvas.active,
+        #circle-mask-canvas.active {
             opacity: 1;
             visibility: visible;
         }
@@ -316,6 +321,7 @@
     <div id="atmosphere-overlay" aria-hidden="true"></div>
     <canvas id="reveal-under-canvas" aria-hidden="true"></canvas>
     <canvas id="reveal-canvas" aria-label="Pixel reveal canvas"></canvas>
+    <canvas id="circle-mask-canvas" aria-label="Concentric image mask canvas"></canvas>
 
     <!-- Initial Unlock Overlay -->
     <div id="setup-overlay">
@@ -333,6 +339,7 @@
     <div id="journal-panel" aria-label="Experience journal">
         <button class="journal-btn active" data-entry="001" title="001 Original ambient mix">001</button>
         <button class="journal-btn" data-entry="002" title="002 Pixel reveal brush">002</button>
+        <button class="journal-btn" data-entry="003" title="003 Concentric image masks">003</button>
     </div>
 
     <script>
@@ -365,6 +372,13 @@
         let revealCycleIndex = 0;
         let revealProgress = 0;
         let revealIsAdvancing = false;
+        let circleImage = null;
+        let circleImageIndex = 0;
+        let circlePointerX = 0;
+        let circlePointerY = 0;
+        let circleTargetX = 0;
+        let circleTargetY = 0;
+        let circleAnimationId = null;
         const FADE_DURATION = 4.0; // Audio crossfade overlap length (seconds)
         const DRIFT_CLASSES = ['drift-a', 'drift-b', 'drift-c'];
         const REVEAL_ADVANCE_THRESHOLD = 0.6;
@@ -381,8 +395,10 @@
 
         const revealCanvas = document.getElementById('reveal-canvas');
         const revealUnderCanvas = document.getElementById('reveal-under-canvas');
+        const circleMaskCanvas = document.getElementById('circle-mask-canvas');
         const revealCtx = revealCanvas.getContext('2d', { alpha: true });
         const revealUnderCtx = revealUnderCanvas.getContext('2d', { alpha: true });
+        const circleMaskCtx = circleMaskCanvas.getContext('2d', { alpha: true });
 
         function loadImage(src) {
             return new Promise((resolve, reject) => {
@@ -421,12 +437,19 @@
             revealCanvas.height = Math.floor(window.innerHeight * dpr);
             revealUnderCanvas.width = revealCanvas.width;
             revealUnderCanvas.height = revealCanvas.height;
+            circleMaskCanvas.width = revealCanvas.width;
+            circleMaskCanvas.height = revealCanvas.height;
             revealCanvas.style.width = `${window.innerWidth}px`;
             revealCanvas.style.height = `${window.innerHeight}px`;
             revealUnderCanvas.style.width = revealCanvas.style.width;
             revealUnderCanvas.style.height = revealCanvas.style.height;
+            circleMaskCanvas.style.width = revealCanvas.style.width;
+            circleMaskCanvas.style.height = revealCanvas.style.height;
             if (activeEntry === '002' && revealReady) {
                 renderRevealStack();
+            }
+            if (activeEntry === '003' && circleImage) {
+                renderCircleMasks();
             }
         }
 
@@ -556,10 +579,85 @@
             }
         }
 
+        async function prepareCircleMasks(advance = false) {
+            circleImageIndex = advance ? (circleImageIndex + 1) % IMAGES.length : currentImageIndex;
+            setVisibleBackground(circleImageIndex);
+            try {
+                circleImage = await loadImage(IMAGES[circleImageIndex]);
+                circlePointerX = 0;
+                circlePointerY = 0;
+                circleTargetX = 0;
+                circleTargetY = 0;
+                startCircleAnimation();
+            } catch (error) {
+                console.error('Circle mask image could not be prepared:', error);
+            }
+        }
+
+        function startCircleAnimation() {
+            if (circleAnimationId) cancelAnimationFrame(circleAnimationId);
+            const tick = () => {
+                if (activeEntry !== '003') {
+                    circleAnimationId = null;
+                    return;
+                }
+                circlePointerX += (circleTargetX - circlePointerX) * 0.08;
+                circlePointerY += (circleTargetY - circlePointerY) * 0.08;
+                renderCircleMasks();
+                circleAnimationId = requestAnimationFrame(tick);
+            };
+            tick();
+        }
+
+        function renderCircleMasks() {
+            if (!circleImage) return;
+            const width = circleMaskCanvas.width;
+            const height = circleMaskCanvas.height;
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const maxRadius = Math.hypot(width, height) * 0.58;
+            const ringCount = 12;
+
+            circleMaskCtx.clearRect(0, 0, width, height);
+            circleMaskCtx.fillStyle = '#050505';
+            circleMaskCtx.fillRect(0, 0, width, height);
+
+            for (let i = ringCount; i >= 1; i--) {
+                const radius = (maxRadius / ringCount) * i;
+                const nextRadius = (maxRadius / ringCount) * (i - 0.52);
+                const offsetStrength = (ringCount - i + 1) / ringCount;
+                const offsetX = circlePointerX * offsetStrength * 46;
+                const offsetY = circlePointerY * offsetStrength * 38;
+
+                circleMaskCtx.save();
+                circleMaskCtx.beginPath();
+                circleMaskCtx.arc(centerX + offsetX, centerY + offsetY, radius, 0, Math.PI * 2);
+                if (nextRadius > 0) {
+                    circleMaskCtx.arc(centerX + offsetX * 0.72, centerY + offsetY * 0.72, nextRadius, 0, Math.PI * 2, true);
+                }
+                circleMaskCtx.clip('evenodd');
+                circleMaskCtx.globalAlpha = 0.72 + offsetStrength * 0.28;
+                circleMaskCtx.filter = `contrast(${1.08 + offsetStrength * 0.42}) saturate(${1.05 + offsetStrength * 0.34})`;
+                drawImageCover(circleMaskCtx, circleMaskCanvas, circleImage);
+                circleMaskCtx.restore();
+            }
+
+            circleMaskCtx.globalAlpha = 1;
+            circleMaskCtx.filter = 'none';
+        }
+
+        function updateCirclePointer(event) {
+            if (activeEntry !== '003') return;
+            const rect = circleMaskCanvas.getBoundingClientRect();
+            circleTargetX = ((event.clientX - rect.left) / rect.width - 0.5) * 2;
+            circleTargetY = ((event.clientY - rect.top) / rect.height - 0.5) * 2;
+        }
+
         function switchEntry(entry) {
             activeEntry = entry;
             document.body.classList.toggle('entry-001', entry === '001');
             document.body.classList.toggle('entry-002', entry === '002');
+            document.body.classList.toggle('entry-003', entry === '003');
             document.querySelectorAll('.journal-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.entry === entry);
             });
@@ -567,13 +665,24 @@
             if (entry === '002') {
                 revealUnderCanvas.classList.add('active');
                 revealCanvas.classList.add('active');
+                circleMaskCanvas.classList.remove('active');
                 revealCycleIndex = currentImageIndex;
                 prepareRevealStack();
+            } else if (entry === '003') {
+                revealUnderCanvas.classList.remove('active');
+                revealCanvas.classList.remove('active');
+                circleMaskCanvas.classList.add('active');
+                revealReady = false;
+                revealIsAdvancing = false;
+                prepareCircleMasks();
             } else {
                 revealUnderCanvas.classList.remove('active');
                 revealCanvas.classList.remove('active');
+                circleMaskCanvas.classList.remove('active');
                 revealReady = false;
                 revealIsAdvancing = false;
+                if (circleAnimationId) cancelAnimationFrame(circleAnimationId);
+                circleAnimationId = null;
                 transitionImage();
             }
         }
@@ -662,6 +771,9 @@
             if (activeEntry === '002') {
                 prepareRevealStack(true);
                 playRandomAudioTrack();
+            } else if (activeEntry === '003') {
+                prepareCircleMasks(true);
+                playRandomAudioTrack();
             } else {
                 triggerNextCycle();
             }
@@ -676,6 +788,8 @@
             paintPixelReveal(event);
         });
         revealCanvas.addEventListener('pointermove', paintPixelReveal);
+        circleMaskCanvas.addEventListener('pointermove', updateCirclePointer);
+        circleMaskCanvas.addEventListener('pointerdown', updateCirclePointer);
         window.addEventListener('resize', resizeRevealCanvas);
         resizeRevealCanvas();
 
