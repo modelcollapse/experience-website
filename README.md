@@ -3,7 +3,7 @@
 A single-page journal of numbered interactive ambience experiments.
 
 - `001`: Slow blur dissolve ambience with drifting photos, light leaks, vignette, grain, and crossfaded audio.
-- `002`: Pixel dissolve reveal brush. Move or press over the image to fade rectangular pixels from the top layer and reveal a deeper blended image stack underneath.
+- `002`: Pixel dissolve reveal brush. Move or press over the image to fade rectangular pixels from the top layer and reveal a deeper blended image stack underneath. Once the top layer is mostly erased, a new image fades in so the reveal keeps cycling.
 
 ## Run locally
 

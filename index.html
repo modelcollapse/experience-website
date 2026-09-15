@@ -131,10 +131,23 @@
         #reveal-canvas {
             z-index: 2;
         }
+        #reveal-canvas.refreshing {
+            animation: revealSurfaceIn 1.6s ease both;
+        }
         #reveal-under-canvas.active,
         #reveal-canvas.active {
             opacity: 1;
             visibility: visible;
+        }
+        @keyframes revealSurfaceIn {
+            0% {
+                opacity: 0;
+                filter: blur(18px) brightness(1.3);
+            }
+            100% {
+                opacity: 1;
+                filter: blur(0) brightness(1);
+            }
         }
 
         /* Initial Unlock Overlay */
@@ -350,8 +363,12 @@
         let revealImageStack = [];
         let revealTopImage = null;
         let revealReady = false;
+        let revealCycleIndex = 0;
+        let revealProgress = 0;
+        let revealIsAdvancing = false;
         const FADE_DURATION = 4.0; // Audio crossfade overlap length (seconds)
         const DRIFT_CLASSES = ['drift-a', 'drift-b', 'drift-c'];
+        const REVEAL_ADVANCE_THRESHOLD = 0.6;
 
         // Inject background elements into standard browser template DOM
         const bgContainer = document.getElementById('bg-container');
@@ -431,8 +448,13 @@
             setVisibleBackground(randomIndex);
         }
 
-        async function prepareRevealStack() {
-            const startIndex = currentImageIndex;
+        async function prepareRevealStack(advance = false) {
+            if (advance) {
+                revealCycleIndex = (revealCycleIndex + 1) % IMAGES.length;
+            } else {
+                revealCycleIndex = currentImageIndex;
+            }
+            const startIndex = revealCycleIndex;
             const imageIndexes = IMAGES.map((_, idx) => (startIndex + idx) % IMAGES.length);
             setVisibleBackground(imageIndexes[0]);
 
@@ -441,7 +463,9 @@
                 revealImageStack = loadedImages.slice(0, Math.max(2, loadedImages.length - 1));
                 revealTopImage = loadedImages[loadedImages.length - 1];
                 revealReady = true;
+                revealProgress = 0;
                 renderRevealStack();
+                animateNewRevealSurface();
             } catch (error) {
                 revealReady = false;
                 console.error('Reveal images could not be prepared:', error);
@@ -461,6 +485,12 @@
             revealCtx.globalCompositeOperation = 'source-over';
             revealCtx.clearRect(0, 0, revealCanvas.width, revealCanvas.height);
             drawImageCover(revealCtx, revealCanvas, revealTopImage);
+        }
+
+        function animateNewRevealSurface() {
+            revealCanvas.classList.remove('refreshing');
+            void revealCanvas.offsetWidth;
+            revealCanvas.classList.add('refreshing');
         }
 
         function addRevealTexture(seed) {
@@ -489,6 +519,7 @@
             const basePixel = (7 + Math.random() * 12) * dpr;
             const x = (event.clientX - rect.left) * dpr;
             const y = (event.clientY - rect.top) * dpr;
+            let revealedArea = 0;
 
             revealCtx.globalCompositeOperation = 'destination-out';
             for (let px = x - brushRadius; px <= x + brushRadius; px += basePixel) {
@@ -505,10 +536,25 @@
                         const jitterY = (Math.random() - 0.5) * basePixel * 1.5;
                         revealCtx.globalAlpha = 0.24 + edgeFalloff * (0.5 + Math.random() * 0.26);
                         revealCtx.fillRect(px + jitterX, py + jitterY, width, height);
+                        revealedArea += width * height * revealCtx.globalAlpha;
                     }
                 }
             }
             revealCtx.globalAlpha = 1;
+            trackRevealProgress(revealedArea);
+        }
+
+        function trackRevealProgress(revealedArea) {
+            if (revealIsAdvancing || revealedArea <= 0) return;
+            const canvasArea = revealCanvas.width * revealCanvas.height;
+            revealProgress = Math.min(1, revealProgress + revealedArea / canvasArea);
+            if (revealProgress >= REVEAL_ADVANCE_THRESHOLD) {
+                revealIsAdvancing = true;
+                setTimeout(async () => {
+                    await prepareRevealStack(true);
+                    revealIsAdvancing = false;
+                }, 360);
+            }
         }
 
         function switchEntry(entry) {
@@ -522,11 +568,13 @@
             if (entry === '002') {
                 revealUnderCanvas.classList.add('active');
                 revealCanvas.classList.add('active');
+                revealCycleIndex = currentImageIndex;
                 prepareRevealStack();
             } else {
                 revealUnderCanvas.classList.remove('active');
                 revealCanvas.classList.remove('active');
                 revealReady = false;
+                revealIsAdvancing = false;
                 transitionImage();
             }
         }
@@ -613,7 +661,7 @@
 
         document.getElementById('next-btn').addEventListener('click', () => {
             if (activeEntry === '002') {
-                prepareRevealStack();
+                prepareRevealStack(true);
                 playRandomAudioTrack();
             } else {
                 triggerNextCycle();
