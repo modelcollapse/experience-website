@@ -91,7 +91,7 @@
         /* Minimal Top-Left Control Panel */
         #control-panel {
             position: absolute;
-            top: 20px;
+            bottom: 20px;
             left: 20px;
             z-index: 2;
             display: flex;
@@ -113,8 +113,8 @@
         }
         #journal-panel {
             position: absolute;
-            right: 20px;
-            bottom: 20px;
+            top: 20px;
+            left: 20px;
             z-index: 2;
             display: flex;
             gap: 8px;
@@ -147,6 +147,21 @@
         .journal-btn.active {
             background: #fff;
             color: #000;
+        }
+        @media (max-width: 520px) {
+            #control-panel {
+                left: 12px;
+                bottom: 12px;
+                gap: 10px;
+                padding: 9px 12px;
+            }
+            #journal-panel {
+                top: 12px;
+                left: 12px;
+            }
+            input[type="range"] {
+                width: 64px;
+            }
         }
 
         /* Control Panel Elements */
