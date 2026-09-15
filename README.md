@@ -1,6 +1,9 @@
-# Minimalist Audio & Photo Experience
+# Experience Journal
 
-A single-page ambient experience with fullscreen rotating photos, crossfaded audio, mute, volume, and next-track controls.
+A single-page journal of numbered interactive ambience experiments.
+
+- `001`: Original fullscreen photo and crossfaded audio mix.
+- `002`: Pixel dissolve reveal brush. Move or press over the image to dissolve the top layer and reveal the image underneath.
 
 ## Run locally
 

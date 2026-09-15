@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minimalist Audio & Photo Experience</title>
+    <title>Experience Journal</title>
     <style>
         * {
             box-sizing: border-box;
@@ -39,6 +39,22 @@
         }
         .bg-slide.active {
             opacity: 1;
+        }
+        #reveal-canvas {
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            visibility: hidden;
+            cursor: crosshair;
+            touch-action: none;
+            transition: opacity 0.6s ease, visibility 0.6s ease;
+        }
+        #reveal-canvas.active {
+            opacity: 1;
+            visibility: visible;
         }
 
         /* Initial Unlock Overlay */
@@ -94,6 +110,43 @@
         #control-panel.visible {
             opacity: 1;
             visibility: visible;
+        }
+        #journal-panel {
+            position: absolute;
+            right: 20px;
+            bottom: 20px;
+            z-index: 2;
+            display: flex;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 8px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+        #journal-panel.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        .journal-btn {
+            width: 54px;
+            height: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.76);
+            cursor: pointer;
+            font-size: 0.82rem;
+            font-weight: 650;
+            letter-spacing: 0;
+        }
+        .journal-btn.active {
+            background: #fff;
+            color: #000;
         }
 
         /* Control Panel Elements */
@@ -153,6 +206,7 @@
 
     <!-- Fullscreen Image Layer -->
     <div id="bg-container"></div>
+    <canvas id="reveal-canvas" aria-label="Pixel reveal canvas"></canvas>
 
     <!-- Initial Unlock Overlay -->
     <div id="setup-overlay">
@@ -166,6 +220,10 @@
             <input id="volume-slider" type="range" min="0" max="1" step="0.01" value="1">
         </div>
         <button id="next-btn" class="ctrl-btn" title="Next Mix">⏭️</button>
+    </div>
+    <div id="journal-panel" aria-label="Experience journal">
+        <button class="journal-btn active" data-entry="001" title="001 Original ambient mix">001</button>
+        <button class="journal-btn" data-entry="002" title="002 Pixel reveal brush">002</button>
     </div>
 
     <script>
@@ -190,6 +248,13 @@
         
         let isMuted = false;
         let preMuteVolume = 1;
+        let activeEntry = '001';
+        let currentImageIndex = 0;
+        let revealBaseIndex = 0;
+        let revealTopIndex = 1;
+        let revealImageA = null;
+        let revealImageB = null;
+        let revealReady = false;
         const FADE_DURATION = 4.0; // Audio crossfade overlap length (seconds)
 
         // Inject background elements into standard browser template DOM
@@ -202,12 +267,128 @@
             bgContainer.appendChild(div);
         });
 
+        const revealCanvas = document.getElementById('reveal-canvas');
+        const revealCtx = revealCanvas.getContext('2d', { alpha: true });
+
+        function loadImage(src) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = src;
+            });
+        }
+
+        function drawImageCover(ctx, img) {
+            const canvasRatio = revealCanvas.width / revealCanvas.height;
+            const imageRatio = img.naturalWidth / img.naturalHeight;
+            let width = revealCanvas.width;
+            let height = revealCanvas.height;
+            let x = 0;
+            let y = 0;
+
+            if (imageRatio > canvasRatio) {
+                height = revealCanvas.height;
+                width = height * imageRatio;
+                x = (revealCanvas.width - width) / 2;
+            } else {
+                width = revealCanvas.width;
+                height = width / imageRatio;
+                y = (revealCanvas.height - height) / 2;
+            }
+
+            ctx.drawImage(img, x, y, width, height);
+        }
+
+        function resizeRevealCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            revealCanvas.width = Math.floor(window.innerWidth * dpr);
+            revealCanvas.height = Math.floor(window.innerHeight * dpr);
+            revealCanvas.style.width = `${window.innerWidth}px`;
+            revealCanvas.style.height = `${window.innerHeight}px`;
+            if (activeEntry === '002' && revealReady) {
+                renderRevealPair();
+            }
+        }
+
+        function setVisibleBackground(index) {
+            const slides = document.querySelectorAll('.bg-slide');
+            slides.forEach(slide => slide.classList.remove('active'));
+            if (slides[index]) slides[index].classList.add('active');
+            currentImageIndex = index;
+        }
+
         function transitionImage() {
             const slides = document.querySelectorAll('.bg-slide');
             if (slides.length === 0) return;
-            slides.forEach(slide => slide.classList.remove('active'));
             const randomIndex = Math.floor(Math.random() * slides.length);
-            slides[randomIndex].classList.add('active');
+            setVisibleBackground(randomIndex);
+        }
+
+        async function prepareRevealPair() {
+            revealBaseIndex = currentImageIndex;
+            revealTopIndex = (currentImageIndex + 1 + Math.floor(Math.random() * (IMAGES.length - 1))) % IMAGES.length;
+            setVisibleBackground(revealBaseIndex);
+
+            try {
+                [revealImageA, revealImageB] = await Promise.all([
+                    loadImage(IMAGES[revealBaseIndex]),
+                    loadImage(IMAGES[revealTopIndex])
+                ]);
+                revealReady = true;
+                renderRevealPair();
+            } catch (error) {
+                revealReady = false;
+                console.error('Reveal images could not be prepared:', error);
+            }
+        }
+
+        function renderRevealPair() {
+            revealCtx.globalCompositeOperation = 'source-over';
+            revealCtx.clearRect(0, 0, revealCanvas.width, revealCanvas.height);
+            drawImageCover(revealCtx, revealImageB);
+        }
+
+        function paintPixelReveal(event) {
+            if (activeEntry !== '002' || !revealReady) return;
+            const rect = revealCanvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            const pressure = event.pressure && event.pressure > 0 ? event.pressure : 0.55;
+            const brushRadius = (36 + pressure * 74) * dpr;
+            const pixelSize = 10 * dpr;
+            const x = (event.clientX - rect.left) * dpr;
+            const y = (event.clientY - rect.top) * dpr;
+
+            revealCtx.globalCompositeOperation = 'destination-out';
+            for (let px = x - brushRadius; px <= x + brushRadius; px += pixelSize) {
+                for (let py = y - brushRadius; py <= y + brushRadius; py += pixelSize) {
+                    const dx = px - x;
+                    const dy = py - y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    const edgeFalloff = 1 - distance / brushRadius;
+                    if (edgeFalloff > 0 && Math.random() < edgeFalloff * 0.85) {
+                        const jitter = Math.random() * pixelSize * 0.7;
+                        revealCtx.clearRect(px + jitter, py + jitter, pixelSize, pixelSize);
+                    }
+                }
+            }
+        }
+
+        function switchEntry(entry) {
+            activeEntry = entry;
+            document.querySelectorAll('.journal-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.entry === entry);
+            });
+
+            if (entry === '002') {
+                revealCanvas.classList.add('active');
+                prepareRevealPair();
+            } else {
+                revealCanvas.classList.remove('active');
+                revealReady = false;
+                transitionImage();
+            }
         }
 
         // Web Audio Mixing Engine
@@ -282,14 +463,34 @@
             setTimeout(() => document.getElementById('setup-overlay').style.display = 'none', 500);
             
             document.getElementById('control-panel').classList.add('visible');
+            document.getElementById('journal-panel').classList.add('visible');
             
             triggerNextCycle();
-            setInterval(transitionImage, 12000); // Transitions a new photo mix every 12 seconds independently
+            setInterval(() => {
+                if (activeEntry === '001') transitionImage();
+            }, 12000); // Entry 001 transitions a new photo mix every 12 seconds independently
         });
 
         document.getElementById('next-btn').addEventListener('click', () => {
-            triggerNextCycle();
+            if (activeEntry === '002') {
+                prepareRevealPair();
+                playRandomAudioTrack();
+            } else {
+                triggerNextCycle();
+            }
         });
+
+        document.querySelectorAll('.journal-btn').forEach(btn => {
+            btn.addEventListener('click', () => switchEntry(btn.dataset.entry));
+        });
+
+        revealCanvas.addEventListener('pointerdown', (event) => {
+            revealCanvas.setPointerCapture(event.pointerId);
+            paintPixelReveal(event);
+        });
+        revealCanvas.addEventListener('pointermove', paintPixelReveal);
+        window.addEventListener('resize', resizeRevealCanvas);
+        resizeRevealCanvas();
 
         // Sound Engine Value Controllers
         const volumeSlider = document.getElementById('volume-slider');
