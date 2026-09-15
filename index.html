@@ -135,7 +135,7 @@
             z-index: 2;
         }
         #reveal-canvas.refreshing {
-            animation: revealSurfaceIn 1.6s ease both;
+            animation: revealSurfaceIn 2.6s ease both;
         }
         #reveal-under-canvas.active,
         #reveal-canvas.active,
@@ -381,7 +381,7 @@
         let circleAnimationId = null;
         const FADE_DURATION = 4.0; // Audio crossfade overlap length (seconds)
         const DRIFT_CLASSES = ['drift-a', 'drift-b', 'drift-c'];
-        const REVEAL_ADVANCE_THRESHOLD = 0.6;
+        const REVEAL_ADVANCE_THRESHOLD = 0.88;
 
         // Inject background elements into standard browser template DOM
         const bgContainer = document.getElementById('bg-container');
@@ -575,7 +575,7 @@
                 setTimeout(async () => {
                     await prepareRevealStack(true);
                     revealIsAdvancing = false;
-                }, 360);
+                }, 900);
             }
         }
 
