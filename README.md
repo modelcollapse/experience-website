@@ -3,7 +3,7 @@
 A single-page journal of numbered interactive ambience experiments.
 
 - `001`: Slow blur dissolve ambience with drifting photos, risograph-style color wash, dot grain, vignette, and crossfaded audio.
-- `002`: Pixel dissolve reveal brush. Move or press over the image to fade rectangular pixels from the top layer and reveal a deeper blended image stack underneath. Once most of the top layer is erased, a new image slowly fades in so the reveal keeps cycling.
+- `002`: Pixel dissolve reveal brush. Move or press over the image to fade rectangular pixels from the top layer and reveal a deeper blended image stack underneath. When only about 20% of the top layer remains, a new image slowly fades in so the reveal keeps cycling.
 - `003`: Concentric circular image masks that offset in layered motion as the pointer moves.
 
 Audio is shared across the journal. `001` can cycle the audio bed with the image fade, while `002` and `003` keep the current sound bed running as their visuals change.
