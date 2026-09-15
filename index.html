@@ -35,10 +35,83 @@
             background-size: cover;
             background-position: center;
             opacity: 0;
-            transition: opacity 3s ease-in-out; /* Photo blend duration */
+            transform: scale(1.06);
+            filter: blur(18px) brightness(0.78) saturate(0.9);
+            transition: opacity 8s ease-in-out, filter 8s ease-in-out, transform 18s ease-out;
         }
         .bg-slide.active {
             opacity: 1;
+            filter: blur(0) brightness(1.02) saturate(1.08);
+            transform: scale(1.14);
+        }
+        .bg-slide.drift-a.active {
+            background-position: 46% 48%;
+            transform: scale(1.15) translate3d(-1.2%, -0.6%, 0);
+        }
+        .bg-slide.drift-b.active {
+            background-position: 54% 50%;
+            transform: scale(1.13) translate3d(1.1%, -0.9%, 0);
+        }
+        .bg-slide.drift-c.active {
+            background-position: 50% 54%;
+            transform: scale(1.16) translate3d(0.4%, 1.1%, 0);
+        }
+        #atmosphere-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 1.2s ease;
+        }
+        body.entry-001 #atmosphere-overlay {
+            opacity: 1;
+        }
+        #atmosphere-overlay::before {
+            content: "";
+            position: absolute;
+            inset: -20%;
+            background:
+                radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.08), transparent 32%),
+                radial-gradient(circle at 18% 20%, rgba(255, 180, 130, 0.14), transparent 30%),
+                radial-gradient(circle at 82% 78%, rgba(80, 170, 210, 0.12), transparent 34%),
+                linear-gradient(115deg, transparent 0%, rgba(255, 255, 255, 0.08) 42%, transparent 56%);
+            mix-blend-mode: screen;
+            animation: slowLightLeak 22s ease-in-out infinite alternate;
+        }
+        #atmosphere-overlay::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(ellipse at center, transparent 48%, rgba(0, 0, 0, 0.48) 100%),
+                repeating-radial-gradient(circle at 30% 40%, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 4px);
+            mix-blend-mode: overlay;
+            animation: grainPulse 2.8s steps(4) infinite;
+        }
+        @keyframes slowLightLeak {
+            0% {
+                transform: translate3d(-3%, -2%, 0) rotate(-4deg);
+                opacity: 0.55;
+            }
+            100% {
+                transform: translate3d(4%, 3%, 0) rotate(5deg);
+                opacity: 0.85;
+            }
+        }
+        @keyframes grainPulse {
+            0% {
+                transform: translate3d(0, 0, 0);
+                opacity: 0.42;
+            }
+            50% {
+                transform: translate3d(-1.5%, 1%, 0);
+                opacity: 0.58;
+            }
+            100% {
+                transform: translate3d(1%, -1.5%, 0);
+                opacity: 0.46;
+            }
         }
         #reveal-under-canvas,
         #reveal-canvas {
@@ -224,10 +297,11 @@
         }
     </style>
 </head>
-<body>
+<body class="entry-001">
 
     <!-- Fullscreen Image Layer -->
     <div id="bg-container"></div>
+    <div id="atmosphere-overlay" aria-hidden="true"></div>
     <canvas id="reveal-under-canvas" aria-hidden="true"></canvas>
     <canvas id="reveal-canvas" aria-label="Pixel reveal canvas"></canvas>
 
@@ -277,6 +351,7 @@
         let revealTopImage = null;
         let revealReady = false;
         const FADE_DURATION = 4.0; // Audio crossfade overlap length (seconds)
+        const DRIFT_CLASSES = ['drift-a', 'drift-b', 'drift-c'];
 
         // Inject background elements into standard browser template DOM
         const bgContainer = document.getElementById('bg-container');
@@ -341,8 +416,11 @@
 
         function setVisibleBackground(index) {
             const slides = document.querySelectorAll('.bg-slide');
-            slides.forEach(slide => slide.classList.remove('active'));
-            if (slides[index]) slides[index].classList.add('active');
+            slides.forEach(slide => slide.classList.remove('active', ...DRIFT_CLASSES));
+            if (slides[index]) {
+                const driftClass = DRIFT_CLASSES[Math.floor(Math.random() * DRIFT_CLASSES.length)];
+                slides[index].classList.add('active', driftClass);
+            }
             currentImageIndex = index;
         }
 
@@ -435,6 +513,8 @@
 
         function switchEntry(entry) {
             activeEntry = entry;
+            document.body.classList.toggle('entry-001', entry === '001');
+            document.body.classList.toggle('entry-002', entry === '002');
             document.querySelectorAll('.journal-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.entry === entry);
             });
