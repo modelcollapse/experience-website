@@ -3,7 +3,7 @@
 A single-page journal of numbered interactive ambience experiments.
 
 - `001`: Original fullscreen photo and crossfaded audio mix.
-- `002`: Pixel dissolve reveal brush. Move or press over the image to dissolve the top layer and reveal the image underneath.
+- `002`: Pixel dissolve reveal brush. Move or press over the image to fade rectangular pixels from the top layer and reveal a deeper blended image stack underneath.
 
 ## Run locally
 

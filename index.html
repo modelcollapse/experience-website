@@ -40,10 +40,10 @@
         .bg-slide.active {
             opacity: 1;
         }
+        #reveal-under-canvas,
         #reveal-canvas {
             position: absolute;
             inset: 0;
-            z-index: 1;
             width: 100%;
             height: 100%;
             opacity: 0;
@@ -52,6 +52,13 @@
             touch-action: none;
             transition: opacity 0.6s ease, visibility 0.6s ease;
         }
+        #reveal-under-canvas {
+            z-index: 1;
+        }
+        #reveal-canvas {
+            z-index: 2;
+        }
+        #reveal-under-canvas.active,
         #reveal-canvas.active {
             opacity: 1;
             visibility: visible;
@@ -93,7 +100,7 @@
             position: absolute;
             bottom: 20px;
             left: 20px;
-            z-index: 2;
+            z-index: 3;
             display: flex;
             align-items: center;
             gap: 15px;
@@ -115,7 +122,7 @@
             position: absolute;
             top: 20px;
             left: 20px;
-            z-index: 2;
+            z-index: 3;
             display: flex;
             gap: 8px;
             background: rgba(0, 0, 0, 0.4);
@@ -221,6 +228,7 @@
 
     <!-- Fullscreen Image Layer -->
     <div id="bg-container"></div>
+    <canvas id="reveal-under-canvas" aria-hidden="true"></canvas>
     <canvas id="reveal-canvas" aria-label="Pixel reveal canvas"></canvas>
 
     <!-- Initial Unlock Overlay -->
@@ -265,10 +273,8 @@
         let preMuteVolume = 1;
         let activeEntry = '001';
         let currentImageIndex = 0;
-        let revealBaseIndex = 0;
-        let revealTopIndex = 1;
-        let revealImageA = null;
-        let revealImageB = null;
+        let revealImageStack = [];
+        let revealTopImage = null;
         let revealReady = false;
         const FADE_DURATION = 4.0; // Audio crossfade overlap length (seconds)
 
@@ -283,7 +289,9 @@
         });
 
         const revealCanvas = document.getElementById('reveal-canvas');
+        const revealUnderCanvas = document.getElementById('reveal-under-canvas');
         const revealCtx = revealCanvas.getContext('2d', { alpha: true });
+        const revealUnderCtx = revealUnderCanvas.getContext('2d', { alpha: true });
 
         function loadImage(src) {
             return new Promise((resolve, reject) => {
@@ -295,22 +303,22 @@
             });
         }
 
-        function drawImageCover(ctx, img) {
-            const canvasRatio = revealCanvas.width / revealCanvas.height;
+        function drawImageCover(ctx, canvas, img) {
+            const canvasRatio = canvas.width / canvas.height;
             const imageRatio = img.naturalWidth / img.naturalHeight;
-            let width = revealCanvas.width;
-            let height = revealCanvas.height;
+            let width = canvas.width;
+            let height = canvas.height;
             let x = 0;
             let y = 0;
 
             if (imageRatio > canvasRatio) {
-                height = revealCanvas.height;
+                height = canvas.height;
                 width = height * imageRatio;
-                x = (revealCanvas.width - width) / 2;
+                x = (canvas.width - width) / 2;
             } else {
-                width = revealCanvas.width;
+                width = canvas.width;
                 height = width / imageRatio;
-                y = (revealCanvas.height - height) / 2;
+                y = (canvas.height - height) / 2;
             }
 
             ctx.drawImage(img, x, y, width, height);
@@ -320,10 +328,14 @@
             const dpr = window.devicePixelRatio || 1;
             revealCanvas.width = Math.floor(window.innerWidth * dpr);
             revealCanvas.height = Math.floor(window.innerHeight * dpr);
+            revealUnderCanvas.width = revealCanvas.width;
+            revealUnderCanvas.height = revealCanvas.height;
             revealCanvas.style.width = `${window.innerWidth}px`;
             revealCanvas.style.height = `${window.innerHeight}px`;
+            revealUnderCanvas.style.width = revealCanvas.style.width;
+            revealUnderCanvas.style.height = revealCanvas.style.height;
             if (activeEntry === '002' && revealReady) {
-                renderRevealPair();
+                renderRevealStack();
             }
         }
 
@@ -341,28 +353,53 @@
             setVisibleBackground(randomIndex);
         }
 
-        async function prepareRevealPair() {
-            revealBaseIndex = currentImageIndex;
-            revealTopIndex = (currentImageIndex + 1 + Math.floor(Math.random() * (IMAGES.length - 1))) % IMAGES.length;
-            setVisibleBackground(revealBaseIndex);
+        async function prepareRevealStack() {
+            const startIndex = currentImageIndex;
+            const imageIndexes = IMAGES.map((_, idx) => (startIndex + idx) % IMAGES.length);
+            setVisibleBackground(imageIndexes[0]);
 
             try {
-                [revealImageA, revealImageB] = await Promise.all([
-                    loadImage(IMAGES[revealBaseIndex]),
-                    loadImage(IMAGES[revealTopIndex])
-                ]);
+                const loadedImages = await Promise.all(imageIndexes.map(idx => loadImage(IMAGES[idx])));
+                revealImageStack = loadedImages.slice(0, Math.max(2, loadedImages.length - 1));
+                revealTopImage = loadedImages[loadedImages.length - 1];
                 revealReady = true;
-                renderRevealPair();
+                renderRevealStack();
             } catch (error) {
                 revealReady = false;
                 console.error('Reveal images could not be prepared:', error);
             }
         }
 
-        function renderRevealPair() {
+        function renderRevealStack() {
+            revealUnderCtx.globalCompositeOperation = 'source-over';
+            revealUnderCtx.clearRect(0, 0, revealUnderCanvas.width, revealUnderCanvas.height);
+            revealImageStack.forEach((img, index) => {
+                revealUnderCtx.globalAlpha = index === 0 ? 1 : 0.42;
+                drawImageCover(revealUnderCtx, revealUnderCanvas, img);
+                if (index > 0) addRevealTexture(index);
+            });
+            revealUnderCtx.globalAlpha = 1;
+
             revealCtx.globalCompositeOperation = 'source-over';
             revealCtx.clearRect(0, 0, revealCanvas.width, revealCanvas.height);
-            drawImageCover(revealCtx, revealImageB);
+            drawImageCover(revealCtx, revealCanvas, revealTopImage);
+        }
+
+        function addRevealTexture(seed) {
+            const dpr = window.devicePixelRatio || 1;
+            const bandCount = 10 + seed * 3;
+            revealUnderCtx.globalCompositeOperation = 'screen';
+            for (let i = 0; i < bandCount; i++) {
+                const horizontal = Math.random() > 0.45;
+                const x = Math.random() * revealUnderCanvas.width;
+                const y = Math.random() * revealUnderCanvas.height;
+                const w = horizontal ? (80 + Math.random() * 260) * dpr : (14 + Math.random() * 44) * dpr;
+                const h = horizontal ? (14 + Math.random() * 44) * dpr : (80 + Math.random() * 260) * dpr;
+                revealUnderCtx.globalAlpha = 0.06 + Math.random() * 0.08;
+                revealUnderCtx.fillStyle = '#fff';
+                revealUnderCtx.fillRect(x, y, w, h);
+            }
+            revealUnderCtx.globalCompositeOperation = 'source-over';
         }
 
         function paintPixelReveal(event) {
@@ -370,24 +407,30 @@
             const rect = revealCanvas.getBoundingClientRect();
             const dpr = window.devicePixelRatio || 1;
             const pressure = event.pressure && event.pressure > 0 ? event.pressure : 0.55;
-            const brushRadius = (36 + pressure * 74) * dpr;
-            const pixelSize = 10 * dpr;
+            const brushRadius = (44 + pressure * 96) * dpr;
+            const basePixel = (7 + Math.random() * 12) * dpr;
             const x = (event.clientX - rect.left) * dpr;
             const y = (event.clientY - rect.top) * dpr;
 
             revealCtx.globalCompositeOperation = 'destination-out';
-            for (let px = x - brushRadius; px <= x + brushRadius; px += pixelSize) {
-                for (let py = y - brushRadius; py <= y + brushRadius; py += pixelSize) {
+            for (let px = x - brushRadius; px <= x + brushRadius; px += basePixel) {
+                for (let py = y - brushRadius; py <= y + brushRadius; py += basePixel) {
                     const dx = px - x;
                     const dy = py - y;
                     const distance = Math.sqrt(dx * dx + dy * dy);
                     const edgeFalloff = 1 - distance / brushRadius;
-                    if (edgeFalloff > 0 && Math.random() < edgeFalloff * 0.85) {
-                        const jitter = Math.random() * pixelSize * 0.7;
-                        revealCtx.clearRect(px + jitter, py + jitter, pixelSize, pixelSize);
+                    if (edgeFalloff > 0 && Math.random() < edgeFalloff * 0.72) {
+                        const horizontal = Math.random() > 0.5;
+                        const width = basePixel * (horizontal ? 1.4 + Math.random() * 3.8 : 0.7 + Math.random() * 1.6);
+                        const height = basePixel * (horizontal ? 0.7 + Math.random() * 1.8 : 1.4 + Math.random() * 4.2);
+                        const jitterX = (Math.random() - 0.5) * basePixel * 1.5;
+                        const jitterY = (Math.random() - 0.5) * basePixel * 1.5;
+                        revealCtx.globalAlpha = 0.24 + edgeFalloff * (0.5 + Math.random() * 0.26);
+                        revealCtx.fillRect(px + jitterX, py + jitterY, width, height);
                     }
                 }
             }
+            revealCtx.globalAlpha = 1;
         }
 
         function switchEntry(entry) {
@@ -397,9 +440,11 @@
             });
 
             if (entry === '002') {
+                revealUnderCanvas.classList.add('active');
                 revealCanvas.classList.add('active');
-                prepareRevealPair();
+                prepareRevealStack();
             } else {
+                revealUnderCanvas.classList.remove('active');
                 revealCanvas.classList.remove('active');
                 revealReady = false;
                 transitionImage();
@@ -488,7 +533,7 @@
 
         document.getElementById('next-btn').addEventListener('click', () => {
             if (activeEntry === '002') {
-                prepareRevealPair();
+                prepareRevealStack();
                 playRandomAudioTrack();
             } else {
                 triggerNextCycle();
