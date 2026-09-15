@@ -359,11 +359,18 @@
             "assets/audio/morning-sounds-2026-09-15.mp3"
         ];
 
+        const SKETCH_AUDIO_MODE = {
+            "001": "ambient-cycle",
+            "002": "hold",
+            "003": "hold"
+        };
+
         // Core Systems Configuration
         let audioCtx;
         let masterGainNode; // Parent master volume slider tracking node
         let currentSourceNode = null;
         let currentTrackGainNode = null;
+        let currentTrackIndex = -1;
         
         let isMuted = false;
         let preMuteVolume = 1;
@@ -701,7 +708,12 @@
             }
 
             if (AUDIO_TRACKS.length === 0) return;
-            const randomTrackIndex = Math.floor(Math.random() * AUDIO_TRACKS.length);
+            let randomTrackIndex = Math.floor(Math.random() * AUDIO_TRACKS.length);
+            if (AUDIO_TRACKS.length > 1) {
+                while (randomTrackIndex === currentTrackIndex) {
+                    randomTrackIndex = Math.floor(Math.random() * AUDIO_TRACKS.length);
+                }
+            }
             const trackUrl = AUDIO_TRACKS[randomTrackIndex];
             
             try {
@@ -739,6 +751,7 @@
 
                 currentSourceNode = newSourceNode;
                 currentTrackGainNode = newTrackGainNode;
+                currentTrackIndex = randomTrackIndex;
 
                 newSourceNode.onended = () => {
                     if (currentSourceNode === newSourceNode) {
@@ -753,7 +766,9 @@
 
         function triggerNextCycle() {
             transitionImage();
-            playRandomAudioTrack();
+            if (SKETCH_AUDIO_MODE[activeEntry] === 'ambient-cycle') {
+                playRandomAudioTrack();
+            }
         }
 
         // Action Trigger Listeners
@@ -773,10 +788,8 @@
         document.getElementById('next-btn').addEventListener('click', () => {
             if (activeEntry === '002') {
                 prepareRevealStack(true);
-                playRandomAudioTrack();
             } else if (activeEntry === '003') {
                 prepareCircleMasks(true);
-                playRandomAudioTrack();
             } else {
                 triggerNextCycle();
             }
