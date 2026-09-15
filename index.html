@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimalist Audio & Photo Experience</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: #000;
+        }
+        /* Fullscreen Photo Layers */
+        #bg-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        .bg-slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0;
+            transition: opacity 3s ease-in-out; /* Photo blend duration */
+        }
+        .bg-slide.active {
+            opacity: 1;
+        }
+
+        /* Initial Unlock Overlay */
+        #setup-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 3;
+            background: #111;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+        }
+        #start-btn {
+            padding: 15px 40px;
+            font-size: 1.1rem;
+            background: #fff;
+            color: #000;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 600;
+            box-shadow: 0 4px 20px rgba(255,255,255,0.1);
+            transition: all 0.2s ease;
+        }
+        #start-btn:hover {
+            transform: scale(1.03);
+            background: #e5e5e5;
+        }
+
+        /* Minimal Top-Left Control Panel */
+        #control-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 10px 18px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+        #control-panel.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Control Panel Elements */
+        .ctrl-btn {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 1.1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+            width: 28px;
+            height: 28px;
+        }
+        .ctrl-btn:hover {
+            opacity: 1;
+        }
+        
+        /* Volume Container & Slider Styling */
+        .volume-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 80px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+            outline: none;
+            cursor: pointer;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Fullscreen Image Layer -->
+    <div id="bg-container"></div>
+
+    <!-- Initial Unlock Overlay -->
+    <div id="setup-overlay">
+        <button id="start-btn">Enter Experience</button>
+    </div>
+
+    <!-- Minimal Floating Top-Left UI -->
+    <div id="control-panel">
+        <button id="mute-btn" class="ctrl-btn" title="Mute/Unmute">🔊</button>
+        <div class="volume-container">
+            <input id="volume-slider" type="range" min="0" max="1" step="0.01" value="1">
+        </div>
+        <button id="next-btn" class="ctrl-btn" title="Next Mix">⏭️</button>
+    </div>
+
+    <script>
+        // ASSETS CONFIGURATION: Swap these placeholders with your actual server file paths!
+        const IMAGES = [
+            "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1920&q=80",
+            "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1920&q=80",
+            "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1920&q=80"
+        ];
+
+        const AUDIO_TRACKS = [
+            "https://actions.google.com/sounds/v1/ambiences/ambient_hum_air_conditioner.ogg",
+            "https://actions.google.com/sounds/v1/ambiences/morning_birds.ogg",
+            "https://actions.google.com/sounds/v1/ambiences/rain_heavy_loud.ogg"
+        ];
+
+        // Core Systems Configuration
+        let audioCtx;
+        let masterGainNode; // Parent master volume slider tracking node
+        let currentSourceNode = null;
+        let currentTrackGainNode = null;
+        
+        let isMuted = false;
+        let preMuteVolume = 1;
+        const FADE_DURATION = 4.0; // Audio crossfade overlap length (seconds)
+
+        // Inject background elements into standard browser template DOM
+        const bgContainer = document.getElementById('bg-container');
+        IMAGES.forEach((src, idx) => {
+            const div = document.createElement('div');
+            div.className = 'bg-slide';
+            div.style.backgroundImage = `url('${src}')`;
+            if (idx === 0) div.classList.add('active');
+            bgContainer.appendChild(div);
+        });
+
+        function transitionImage() {
+            const slides = document.querySelectorAll('.bg-slide');
+            if (slides.length === 0) return;
+            slides.forEach(slide => slide.classList.remove('active'));
+            const randomIndex = Math.floor(Math.random() * slides.length);
+            slides[randomIndex].classList.add('active');
+        }
+
+        // Web Audio Mixing Engine
+        async function playRandomAudioTrack() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                // Set up baseline Master volume gain routing
+                masterGainNode = audioCtx.createGain();
+                masterGainNode.connect(audioCtx.destination);
+                masterGainNode.gain.value = parseFloat(volumeSlider.value);
+            }
+
+            if (AUDIO_TRACKS.length === 0) return;
+            const randomTrackIndex = Math.floor(Math.random() * AUDIO_TRACKS.length);
+            const trackUrl = AUDIO_TRACKS[randomTrackIndex];
+            
+            try {
+                const response = await fetch(trackUrl);
+                const arrayBuffer = await response.arrayBuffer();
+                const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+
+                const newSourceNode = audioCtx.createBufferSource();
+                newSourceNode.buffer = audioBuffer;
+
+                const newTrackGainNode = audioCtx.createGain();
+                newTrackGainNode.gain.setValueAtTime(0, audioCtx.currentTime); // Start track completely silent
+
+                // Route: Individual Source Audio Track Node -> Dynamic Volume Mixer -> Final Audio Driver output
+                newSourceNode.connect(newTrackGainNode);
+                newTrackGainNode.connect(masterGainNode);
+
+                const now = audioCtx.currentTime;
+
+                // Seamlessly crossfade active tracks
+                if (currentTrackGainNode && currentSourceNode) {
+                    const oldGain = currentTrackGainNode;
+                    const oldSource = currentSourceNode;
+                    
+                    oldGain.gain.setValueAtTime(oldGain.gain.value, now);
+                    oldGain.gain.linearRampToValueAtTime(0, now + FADE_DURATION);
+                    
+                    setTimeout(() => {
+                        try { oldSource.stop(); } catch(e) {}
+                    }, FADE_DURATION * 1000);
+                }
+
+                newSourceNode.start(now);
+                newTrackGainNode.gain.linearRampToValueAtTime(1, now + FADE_DURATION);
+
+                currentSourceNode = newSourceNode;
+                currentTrackGainNode = newTrackGainNode;
+
+                newSourceNode.onended = () => {
+                    if (currentSourceNode === newSourceNode) {
+                        triggerNextCycle();
+                    }
+                };
+
+            } catch (error) {
+                console.error("Audio target skipped or execution stalled. Verify hosting permissions:", error);
+            }
+        }
+
+        function triggerNextCycle() {
+            transitionImage();
+            playRandomAudioTrack();
+        }
+
+        // Action Trigger Listeners
+        document.getElementById('start-btn').addEventListener('click', () => {
+            document.getElementById('setup-overlay').style.opacity = '0';
+            setTimeout(() => document.getElementById('setup-overlay').style.display = 'none', 500);
+            
+            document.getElementById('control-panel').classList.add('visible');
+            
+            triggerNextCycle();
+            setInterval(transitionImage, 12000); // Transitions a new photo mix every 12 seconds independently
+        });
+
+        document.getElementById('next-btn').addEventListener('click', () => {
+            triggerNextCycle();
+        });
+
+        // Sound Engine Value Controllers
+        const volumeSlider = document.getElementById('volume-slider');
+        const muteBtn = document.getElementById('mute-btn');
+
+        volumeSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            if (masterGainNode) masterGainNode.gain.value = val;
+            
+            if (val === 0) {
+                isMuted = true;
+                muteBtn.textContent = '❌';
+            } else {
+                isMuted = false;
+                muteBtn.textContent = '🔊';
+            }
+        });
+
+        muteBtn.addEventListener('click', () => {
+            if (!masterGainNode) return;
+
+            if (!isMuted) {
+                preMuteVolume = parseFloat(volumeSlider.value);
+                masterGainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+                volumeSlider.value = 0;
+                muteBtn.textContent = '❌';
+                isMuted = true;
+            } else {
+                masterGainNode.gain.setValueAtTime(preMuteVolume, audioCtx.currentTime);
+                volumeSlider.value = preMuteVolume;
+                muteBtn.textContent = '🔊';
+                isMuted = false;
+            }
+        });
+    </script>
+</body>
+</html>
