@@ -629,8 +629,9 @@
             const ringCount = 12;
 
             circleMaskCtx.clearRect(0, 0, width, height);
-            circleMaskCtx.fillStyle = '#050505';
-            circleMaskCtx.fillRect(0, 0, width, height);
+            circleMaskCtx.globalAlpha = 0.72;
+            circleMaskCtx.filter = 'blur(7px) brightness(0.62) contrast(1.18) saturate(0.82)';
+            drawImageCover(circleMaskCtx, circleMaskCanvas, circleImage);
 
             for (let i = ringCount; i >= 1; i--) {
                 const radius = (maxRadius / ringCount) * i;
