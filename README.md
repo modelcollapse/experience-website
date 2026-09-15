@@ -34,4 +34,4 @@ Then open `http://localhost:3000`.
 
 ## Asset note
 
-The current page loads sample photos from Unsplash and sample audio from Google-hosted sound files. For a production version, replace the URLs in `IMAGES` and `AUDIO_TRACKS` inside `index.html` with assets you own or have permission to use.
+The current page uses local files in `assets/images/` and `assets/audio/`. Update the `IMAGES` and `AUDIO_TRACKS` arrays inside `index.html` when replacing or reordering assets.
