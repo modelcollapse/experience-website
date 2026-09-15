@@ -213,10 +213,6 @@
             top: 20px;
             left: 20px;
             z-index: 3;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            max-width: min(680px, calc(100vw - 40px));
             background: rgba(0, 0, 0, 0.4);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
@@ -231,20 +227,20 @@
             opacity: 1;
             visibility: visible;
         }
-        .journal-btn {
-            width: 54px;
-            height: 32px;
+        #journal-select {
+            min-width: min(330px, calc(100vw - 64px));
+            height: 34px;
+            padding: 0 36px 0 12px;
             border: 1px solid rgba(255, 255, 255, 0.16);
             border-radius: 8px;
             background: rgba(255, 255, 255, 0.08);
-            color: rgba(255, 255, 255, 0.76);
+            color: #fff;
             cursor: pointer;
             font-size: 0.82rem;
             font-weight: 650;
             letter-spacing: 0;
         }
-        .journal-btn.active {
-            background: #fff;
+        #journal-select option {
             color: #000;
         }
         #sketch-loader {
@@ -384,25 +380,27 @@
         <button id="next-btn" class="ctrl-btn" title="Next Mix">⏭️</button>
     </div>
     <div id="journal-panel" aria-label="Experience journal">
-        <button class="journal-btn active" data-entry="001" title="001 Original ambient mix">001</button>
-        <button class="journal-btn" data-entry="002" title="002 Pixel reveal brush">002</button>
-        <button class="journal-btn" data-entry="003" title="003 Concentric image masks">003</button>
-        <button class="journal-btn" data-entry="004" title="004 Placeholder">004</button>
-        <button class="journal-btn" data-entry="005" title="005 p5Catalyst">005</button>
-        <button class="journal-btn" data-entry="006" title="006 PerlinNoiseSlider">006</button>
-        <button class="journal-btn" data-entry="007" title="007 ScanLines">007</button>
-        <button class="journal-btn" data-entry="008" title="008 TrailingCircle">008</button>
-        <button class="journal-btn" data-entry="009" title="009 CirclePatternSketch">009</button>
-        <button class="journal-btn" data-entry="010" title="010 CircleLine">010</button>
-        <button class="journal-btn" data-entry="011" title="011 imageslice">011</button>
-        <button class="journal-btn" data-entry="012" title="012 dot-connect">012</button>
-        <button class="journal-btn" data-entry="013" title="013 Wander-Web">013</button>
-        <button class="journal-btn" data-entry="014" title="014 GradientNodes">014</button>
-        <button class="journal-btn" data-entry="015" title="015 GradientDrag">015</button>
-        <button class="journal-btn" data-entry="016" title="016 ColorPills">016</button>
-        <button class="journal-btn" data-entry="017" title="017 AntiGravity_001">017</button>
-        <button class="journal-btn" data-entry="018" title="018 midi-experiments">018</button>
-        <button class="journal-btn" data-entry="019" title="019 digital-nature">019</button>
+        <select id="journal-select" aria-label="Select experience">
+            <option value="001">001 Fade</option>
+            <option value="002">002 Pixel Reveal</option>
+            <option value="003">003 Concentric Masks</option>
+            <option value="004">004 Placeholder</option>
+            <option value="005">005 p5Catalyst</option>
+            <option value="006">006 PerlinNoiseSlider</option>
+            <option value="007">007 ScanLines</option>
+            <option value="008">008 TrailingCircle</option>
+            <option value="009">009 CirclePatternSketch</option>
+            <option value="010">010 CircleLine</option>
+            <option value="011">011 imageslice</option>
+            <option value="012">012 dot-connect</option>
+            <option value="013">013 Wander-Web</option>
+            <option value="014">014 GradientNodes</option>
+            <option value="015">015 GradientDrag</option>
+            <option value="016">016 ColorPills</option>
+            <option value="017">017 AntiGravity_001</option>
+            <option value="018">018 midi-experiments</option>
+            <option value="019">019 digital-nature</option>
+        </select>
     </div>
 
     <script>
@@ -517,6 +515,7 @@
         const sketchLoader = document.getElementById('sketch-loader');
         const sketchLoaderNumber = document.getElementById('sketch-loader-number');
         const sketchLoaderTitle = document.getElementById('sketch-loader-title');
+        const journalSelect = document.getElementById('journal-select');
 
         function loadImage(src) {
             return new Promise((resolve, reject) => {
@@ -765,44 +764,39 @@
             circleTargetY = ((event.clientY - rect.top) / rect.height - 0.5) * 2;
         }
 
+        function clearInteractiveLayers() {
+            revealUnderCanvas.classList.remove('active');
+            revealCanvas.classList.remove('active');
+            circleMaskCanvas.classList.remove('active');
+            revealCtx.clearRect(0, 0, revealCanvas.width, revealCanvas.height);
+            revealUnderCtx.clearRect(0, 0, revealUnderCanvas.width, revealUnderCanvas.height);
+            circleMaskCtx.clearRect(0, 0, circleMaskCanvas.width, circleMaskCanvas.height);
+            revealReady = false;
+            if (circleAnimationId) cancelAnimationFrame(circleAnimationId);
+            circleAnimationId = null;
+        }
+
         function switchEntry(entry) {
             activeEntry = entry;
             document.body.classList.toggle('entry-001', entry === '001');
             document.body.classList.toggle('entry-002', entry === '002');
             document.body.classList.toggle('entry-003', entry === '003');
             document.body.classList.toggle('entry-004', entry === '004');
-            document.querySelectorAll('.journal-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.entry === entry);
-            });
+            if (journalSelect.value !== entry) journalSelect.value = entry;
             showSketchLoader(entry);
 
             if (entry === '002') {
+                clearInteractiveLayers();
                 revealUnderCanvas.classList.add('active');
                 revealCanvas.classList.add('active');
-                circleMaskCanvas.classList.remove('active');
                 revealCycleIndex = currentImageIndex;
                 prepareRevealStack();
             } else if (entry === '003') {
-                revealUnderCanvas.classList.remove('active');
-                revealCanvas.classList.remove('active');
+                clearInteractiveLayers();
                 circleMaskCanvas.classList.add('active');
-                revealReady = false;
                 prepareCircleMasks();
-            } else if (entry === '004') {
-                revealUnderCanvas.classList.remove('active');
-                revealCanvas.classList.remove('active');
-                circleMaskCanvas.classList.remove('active');
-                revealReady = false;
-                if (circleAnimationId) cancelAnimationFrame(circleAnimationId);
-                circleAnimationId = null;
-                transitionImage();
             } else {
-                revealUnderCanvas.classList.remove('active');
-                revealCanvas.classList.remove('active');
-                circleMaskCanvas.classList.remove('active');
-                revealReady = false;
-                if (circleAnimationId) cancelAnimationFrame(circleAnimationId);
-                circleAnimationId = null;
+                clearInteractiveLayers();
                 transitionImage();
             }
         }
@@ -906,9 +900,7 @@
             }
         });
 
-        document.querySelectorAll('.journal-btn').forEach(btn => {
-            btn.addEventListener('click', () => switchEntry(btn.dataset.entry));
-        });
+        journalSelect.addEventListener('change', (event) => switchEntry(event.target.value));
 
         revealCanvas.addEventListener('pointerdown', (event) => {
             revealCanvas.setPointerCapture(event.pointerId);
