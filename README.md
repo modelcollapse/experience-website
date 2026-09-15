@@ -7,7 +7,7 @@ A single-page journal of numbered interactive ambience experiments.
 - `003`: Concentric circular image masks that offset in layered motion over a softened duplicate of the same image.
 - `004`: Placeholder for the next sketch.
 - `005`: p5Catalyst.
-- `006`: PerlinNoiseSlider.
+- `006`: PerlinNoiseSlider first pass: an in-browser generative noise field with pointer-controlled spacing, speed, and glow.
 - `007`: ScanLines.
 - `008`: TrailingCircle.
 - `009`: CirclePatternSketch.

@@ -112,6 +112,7 @@
                 opacity: 0.38;
             }
         }
+        #processing-canvas,
         #circle-mask-canvas,
         #reveal-under-canvas,
         #reveal-canvas {
@@ -134,12 +135,16 @@
         #circle-mask-canvas {
             z-index: 2;
         }
+        #processing-canvas {
+            z-index: 2;
+        }
         #reveal-canvas.refreshing {
             animation: revealSurfaceIn 6s ease both;
         }
         #reveal-under-canvas.active,
         #reveal-canvas.active,
-        #circle-mask-canvas.active {
+        #circle-mask-canvas.active,
+        #processing-canvas.active {
             opacity: 1;
             visibility: visible;
         }
@@ -359,6 +364,7 @@
     <canvas id="reveal-under-canvas" aria-hidden="true"></canvas>
     <canvas id="reveal-canvas" aria-label="Pixel reveal canvas"></canvas>
     <canvas id="circle-mask-canvas" aria-label="Concentric image mask canvas"></canvas>
+    <canvas id="processing-canvas" aria-label="Processing sketch canvas"></canvas>
 
     <!-- Initial Unlock Overlay -->
     <div id="setup-overlay">
@@ -492,6 +498,10 @@
         let circleTargetX = 0;
         let circleTargetY = 0;
         let circleAnimationId = null;
+        let processingAnimationId = null;
+        let processingPointerX = 0.5;
+        let processingPointerY = 0.5;
+        let processingTime = 0;
         let loaderTimeout = null;
         const FADE_DURATION = 4.0; // Audio crossfade overlap length (seconds)
         const DRIFT_CLASSES = ['drift-a', 'drift-b', 'drift-c'];
@@ -509,9 +519,11 @@
         const revealCanvas = document.getElementById('reveal-canvas');
         const revealUnderCanvas = document.getElementById('reveal-under-canvas');
         const circleMaskCanvas = document.getElementById('circle-mask-canvas');
+        const processingCanvas = document.getElementById('processing-canvas');
         const revealCtx = revealCanvas.getContext('2d', { alpha: true });
         const revealUnderCtx = revealUnderCanvas.getContext('2d', { alpha: true });
         const circleMaskCtx = circleMaskCanvas.getContext('2d', { alpha: true });
+        const processingCtx = processingCanvas.getContext('2d', { alpha: true });
         const sketchLoader = document.getElementById('sketch-loader');
         const sketchLoaderNumber = document.getElementById('sketch-loader-number');
         const sketchLoaderTitle = document.getElementById('sketch-loader-title');
@@ -556,17 +568,24 @@
             revealUnderCanvas.height = revealCanvas.height;
             circleMaskCanvas.width = revealCanvas.width;
             circleMaskCanvas.height = revealCanvas.height;
+            processingCanvas.width = revealCanvas.width;
+            processingCanvas.height = revealCanvas.height;
             revealCanvas.style.width = `${window.innerWidth}px`;
             revealCanvas.style.height = `${window.innerHeight}px`;
             revealUnderCanvas.style.width = revealCanvas.style.width;
             revealUnderCanvas.style.height = revealCanvas.style.height;
             circleMaskCanvas.style.width = revealCanvas.style.width;
             circleMaskCanvas.style.height = revealCanvas.style.height;
+            processingCanvas.style.width = revealCanvas.style.width;
+            processingCanvas.style.height = revealCanvas.style.height;
             if (activeEntry === '002' && revealReady) {
                 renderRevealStack();
             }
             if (activeEntry === '003' && circleImage) {
                 renderCircleMasks();
+            }
+            if (activeEntry === '006') {
+                renderPerlinNoiseSlider();
             }
         }
 
@@ -764,16 +783,92 @@
             circleTargetY = ((event.clientY - rect.top) / rect.height - 0.5) * 2;
         }
 
+        function pseudoNoise(x, y, t) {
+            return (
+                Math.sin(x * 0.018 + t) +
+                Math.sin(y * 0.022 - t * 0.72) +
+                Math.sin((x + y) * 0.012 + t * 0.41)
+            ) / 3;
+        }
+
+        function startPerlinNoiseSlider() {
+            if (processingAnimationId) cancelAnimationFrame(processingAnimationId);
+            processingTime = 0;
+            const tick = () => {
+                if (activeEntry !== '006') {
+                    processingAnimationId = null;
+                    return;
+                }
+                processingTime += 0.012 + processingPointerY * 0.026;
+                renderPerlinNoiseSlider();
+                processingAnimationId = requestAnimationFrame(tick);
+            };
+            tick();
+        }
+
+        function renderPerlinNoiseSlider() {
+            const width = processingCanvas.width;
+            const height = processingCanvas.height;
+            const dpr = window.devicePixelRatio || 1;
+            const spacing = (22 + processingPointerX * 46) * dpr;
+            const strokeScale = 0.65 + processingPointerY * 1.8;
+
+            processingCtx.clearRect(0, 0, width, height);
+            processingCtx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+            processingCtx.fillRect(0, 0, width, height);
+            processingCtx.lineCap = 'round';
+
+            for (let y = -spacing; y < height + spacing; y += spacing) {
+                processingCtx.beginPath();
+                for (let x = -spacing; x < width + spacing; x += spacing * 0.42) {
+                    const n = pseudoNoise(x, y, processingTime);
+                    const wave = n * spacing * (1.4 + processingPointerY * 2.4);
+                    const px = x;
+                    const py = y + wave;
+                    if (x === -spacing) {
+                        processingCtx.moveTo(px, py);
+                    } else {
+                        processingCtx.lineTo(px, py);
+                    }
+                }
+                const hue = 205 + Math.sin(y * 0.006 + processingTime) * 54;
+                processingCtx.strokeStyle = `hsla(${hue}, 88%, ${58 + processingPointerY * 22}%, 0.34)`;
+                processingCtx.lineWidth = Math.max(1, strokeScale * dpr);
+                processingCtx.stroke();
+            }
+
+            for (let i = 0; i < 90; i++) {
+                const x = (Math.sin(i * 91.7 + processingTime * 0.7) * 0.5 + 0.5) * width;
+                const y = (Math.sin(i * 41.3 - processingTime * 0.52) * 0.5 + 0.5) * height;
+                const r = (1.5 + pseudoNoise(x, y, processingTime) * 3 + processingPointerX * 5) * dpr;
+                processingCtx.fillStyle = `rgba(255, 245, 160, ${0.08 + processingPointerY * 0.14})`;
+                processingCtx.beginPath();
+                processingCtx.arc(x, y, Math.max(0.8, r), 0, Math.PI * 2);
+                processingCtx.fill();
+            }
+        }
+
+        function updateProcessingPointer(event) {
+            if (activeEntry !== '006') return;
+            const rect = processingCanvas.getBoundingClientRect();
+            processingPointerX = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+            processingPointerY = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
+        }
+
         function clearInteractiveLayers() {
             revealUnderCanvas.classList.remove('active');
             revealCanvas.classList.remove('active');
             circleMaskCanvas.classList.remove('active');
+            processingCanvas.classList.remove('active');
             revealCtx.clearRect(0, 0, revealCanvas.width, revealCanvas.height);
             revealUnderCtx.clearRect(0, 0, revealUnderCanvas.width, revealUnderCanvas.height);
             circleMaskCtx.clearRect(0, 0, circleMaskCanvas.width, circleMaskCanvas.height);
+            processingCtx.clearRect(0, 0, processingCanvas.width, processingCanvas.height);
             revealReady = false;
             if (circleAnimationId) cancelAnimationFrame(circleAnimationId);
             circleAnimationId = null;
+            if (processingAnimationId) cancelAnimationFrame(processingAnimationId);
+            processingAnimationId = null;
         }
 
         function switchEntry(entry) {
@@ -795,6 +890,10 @@
                 clearInteractiveLayers();
                 circleMaskCanvas.classList.add('active');
                 prepareCircleMasks();
+            } else if (entry === '006') {
+                clearInteractiveLayers();
+                processingCanvas.classList.add('active');
+                startPerlinNoiseSlider();
             } else {
                 clearInteractiveLayers();
                 transitionImage();
@@ -909,6 +1008,8 @@
         revealCanvas.addEventListener('pointermove', paintPixelReveal);
         circleMaskCanvas.addEventListener('pointermove', updateCirclePointer);
         circleMaskCanvas.addEventListener('pointerdown', updateCirclePointer);
+        processingCanvas.addEventListener('pointermove', updateProcessingPointer);
+        processingCanvas.addEventListener('pointerdown', updateProcessingPointer);
         window.addEventListener('resize', resizeRevealCanvas);
         resizeRevealCanvas();
 
