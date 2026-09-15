@@ -1,10 +1,6 @@
-# Experience Journal
+# Fade Experience
 
-A single-page journal of numbered interactive ambience experiments.
-
-- `001`: Slow blur dissolve ambience with drifting photos, risograph-style color wash, dot grain, vignette, and crossfaded audio.
-- `002`: Pixel dissolve reveal brush. Move or press over the image to fade rectangular pixels from the top layer and reveal a deeper blended image stack underneath. Once the top layer is mostly erased, a new image fades in so the reveal keeps cycling.
-- `003`: Concentric circular image masks that offset in layered motion as the pointer moves.
+A single-page fullscreen image fade with crossfaded ambient audio, mute, volume, and next controls.
 
 ## Run locally
 

@@ -3,171 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Experience Journal</title>
+    <title>Fade Experience</title>
     <style>
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
         }
-        body, html {
+
+        body,
+        html {
             width: 100%;
             height: 100%;
             overflow: hidden;
             font-family: system-ui, -apple-system, sans-serif;
-            background-color: #000;
+            background: #000;
         }
-        /* Fullscreen Photo Layers */
+
         #bg-container {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            inset: 0;
             z-index: 1;
+            overflow: hidden;
         }
+
         .bg-slide {
             position: absolute;
-            inset: -9%;
+            inset: -8%;
             background-size: cover;
             background-position: center;
             opacity: 0;
-            transform: scale(1.02);
-            filter: blur(26px) brightness(0.72) contrast(1.22) saturate(0.82);
-            transition: opacity 8s ease-in-out, filter 8s ease-in-out, transform 18s ease-out;
+            transform: scale(1.04);
+            filter: blur(28px) brightness(0.72) contrast(1.12);
+            transition: opacity 9s ease-in-out, filter 9s ease-in-out, transform 18s ease-out;
             will-change: opacity, filter, transform;
         }
+
         .bg-slide.active {
             opacity: 1;
-            filter: blur(2px) brightness(1.04) contrast(1.18) saturate(1.16);
-            transform: scale(1.1);
-        }
-        .bg-slide.drift-a.active {
-            background-position: 46% 48%;
-            transform: scale(1.12) translate3d(-0.7%, -0.4%, 0);
-        }
-        .bg-slide.drift-b.active {
-            background-position: 54% 50%;
-            transform: scale(1.11) translate3d(0.7%, -0.5%, 0);
-        }
-        .bg-slide.drift-c.active {
-            background-position: 50% 54%;
-            transform: scale(1.13) translate3d(0.3%, 0.7%, 0);
-        }
-        #atmosphere-overlay {
-            position: absolute;
-            inset: 0;
-            z-index: 2;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 1.2s ease;
-        }
-        body.entry-001 #atmosphere-overlay {
-            opacity: 1;
-        }
-        #atmosphere-overlay::before {
-            content: "";
-            position: absolute;
-            inset: -20%;
-            background:
-                radial-gradient(circle at 24% 28%, rgba(255, 80, 92, 0.24), transparent 34%),
-                radial-gradient(circle at 74% 68%, rgba(0, 174, 196, 0.2), transparent 36%),
-                linear-gradient(120deg, rgba(255, 238, 90, 0.11), transparent 42%, rgba(240, 70, 130, 0.12));
-            mix-blend-mode: color-dodge;
-            animation: slowRisoWash 24s ease-in-out infinite alternate;
-        }
-        #atmosphere-overlay::after {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background:
-                radial-gradient(ellipse at center, transparent 54%, rgba(0, 0, 0, 0.34) 100%),
-                radial-gradient(circle, rgba(255, 255, 255, 0.09) 0 1px, transparent 1.2px 5px),
-                repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.09) 0 1px, transparent 1px 4px);
-            background-size: auto, 9px 9px, auto;
-            mix-blend-mode: soft-light;
-            animation: risoGrain 2.6s steps(5) infinite;
-        }
-        @keyframes slowRisoWash {
-            0% {
-                transform: translate3d(-2%, -1%, 0) rotate(-2deg);
-                opacity: 0.52;
-            }
-            100% {
-                transform: translate3d(2%, 2%, 0) rotate(3deg);
-                opacity: 0.72;
-            }
-        }
-        @keyframes risoGrain {
-            0% {
-                transform: translate3d(0, 0, 0);
-                opacity: 0.34;
-            }
-            50% {
-                transform: translate3d(-0.8%, 0.6%, 0);
-                opacity: 0.48;
-            }
-            100% {
-                transform: translate3d(0.7%, -0.8%, 0);
-                opacity: 0.38;
-            }
-        }
-        #circle-mask-canvas,
-        #reveal-under-canvas,
-        #reveal-canvas {
-            position: absolute;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            opacity: 0;
-            visibility: hidden;
-            cursor: crosshair;
-            touch-action: none;
-            transition: opacity 0.6s ease, visibility 0.6s ease;
-        }
-        #reveal-under-canvas {
-            z-index: 1;
-        }
-        #reveal-canvas {
-            z-index: 2;
-        }
-        #circle-mask-canvas {
-            z-index: 2;
-        }
-        #reveal-canvas.refreshing {
-            animation: revealSurfaceIn 1.6s ease both;
-        }
-        #reveal-under-canvas.active,
-        #reveal-canvas.active,
-        #circle-mask-canvas.active {
-            opacity: 1;
-            visibility: visible;
-        }
-        @keyframes revealSurfaceIn {
-            0% {
-                opacity: 0;
-                filter: blur(18px) brightness(1.3);
-            }
-            100% {
-                opacity: 1;
-                filter: blur(0) brightness(1);
-            }
+            transform: scale(1.12);
+            filter: blur(2px) brightness(1.04) contrast(1.06);
         }
 
-        /* Initial Unlock Overlay */
         #setup-overlay {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            inset: 0;
             z-index: 3;
             background: #111;
             display: flex;
             justify-content: center;
             align-items: center;
             color: #fff;
+            transition: opacity 0.5s ease;
         }
+
         #start-btn {
             padding: 15px 40px;
             font-size: 1.1rem;
@@ -177,20 +66,20 @@
             border-radius: 30px;
             cursor: pointer;
             font-weight: 600;
-            box-shadow: 0 4px 20px rgba(255,255,255,0.1);
-            transition: all 0.2s ease;
+            box-shadow: 0 4px 20px rgba(255, 255, 255, 0.1);
+            transition: transform 0.2s ease, background 0.2s ease;
         }
+
         #start-btn:hover {
             transform: scale(1.03);
             background: #e5e5e5;
         }
 
-        /* Minimal Top-Left Control Panel */
         #control-panel {
             position: absolute;
             bottom: 20px;
             left: 20px;
-            z-index: 3;
+            z-index: 2;
             display: flex;
             align-items: center;
             gap: 15px;
@@ -204,64 +93,12 @@
             visibility: hidden;
             transition: opacity 0.5s ease, visibility 0.5s ease;
         }
+
         #control-panel.visible {
             opacity: 1;
             visibility: visible;
         }
-        #journal-panel {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            z-index: 3;
-            display: flex;
-            gap: 8px;
-            background: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            padding: 8px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.5s ease, visibility 0.5s ease;
-        }
-        #journal-panel.visible {
-            opacity: 1;
-            visibility: visible;
-        }
-        .journal-btn {
-            width: 54px;
-            height: 32px;
-            border: 1px solid rgba(255, 255, 255, 0.16);
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.08);
-            color: rgba(255, 255, 255, 0.76);
-            cursor: pointer;
-            font-size: 0.82rem;
-            font-weight: 650;
-            letter-spacing: 0;
-        }
-        .journal-btn.active {
-            background: #fff;
-            color: #000;
-        }
-        @media (max-width: 520px) {
-            #control-panel {
-                left: 12px;
-                bottom: 12px;
-                gap: 10px;
-                padding: 9px 12px;
-            }
-            #journal-panel {
-                top: 12px;
-                left: 12px;
-            }
-            input[type="range"] {
-                width: 64px;
-            }
-        }
 
-        /* Control Panel Elements */
         .ctrl-btn {
             background: none;
             border: none;
@@ -276,16 +113,17 @@
             width: 28px;
             height: 28px;
         }
+
         .ctrl-btn:hover {
             opacity: 1;
         }
-        
-        /* Volume Container & Slider Styling */
+
         .volume-container {
             display: flex;
             align-items: center;
             gap: 8px;
         }
+
         input[type="range"] {
             -webkit-appearance: none;
             appearance: none;
@@ -296,6 +134,7 @@
             outline: none;
             cursor: pointer;
         }
+
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             width: 12px;
@@ -304,6 +143,7 @@
             background: #fff;
             cursor: pointer;
         }
+
         input[type="range"]::-moz-range-thumb {
             width: 12px;
             height: 12px;
@@ -312,23 +152,28 @@
             cursor: pointer;
             border: none;
         }
+
+        @media (max-width: 520px) {
+            #control-panel {
+                left: 12px;
+                bottom: 12px;
+                gap: 10px;
+                padding: 9px 12px;
+            }
+
+            input[type="range"] {
+                width: 64px;
+            }
+        }
     </style>
 </head>
-<body class="entry-001">
-
-    <!-- Fullscreen Image Layer -->
+<body>
     <div id="bg-container"></div>
-    <div id="atmosphere-overlay" aria-hidden="true"></div>
-    <canvas id="reveal-under-canvas" aria-hidden="true"></canvas>
-    <canvas id="reveal-canvas" aria-label="Pixel reveal canvas"></canvas>
-    <canvas id="circle-mask-canvas" aria-label="Concentric image mask canvas"></canvas>
 
-    <!-- Initial Unlock Overlay -->
     <div id="setup-overlay">
         <button id="start-btn">Enter Experience</button>
     </div>
 
-    <!-- Minimal Floating Top-Left UI -->
     <div id="control-panel">
         <button id="mute-btn" class="ctrl-btn" title="Mute/Unmute">🔊</button>
         <div class="volume-container">
@@ -336,14 +181,8 @@
         </div>
         <button id="next-btn" class="ctrl-btn" title="Next Mix">⏭️</button>
     </div>
-    <div id="journal-panel" aria-label="Experience journal">
-        <button class="journal-btn active" data-entry="001" title="001 Original ambient mix">001</button>
-        <button class="journal-btn" data-entry="002" title="002 Pixel reveal brush">002</button>
-        <button class="journal-btn" data-entry="003" title="003 Concentric image masks">003</button>
-    </div>
 
     <script>
-        // ASSETS CONFIGURATION: Swap these placeholders with your actual server file paths!
         const IMAGES = [
             "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1920&q=80",
             "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1920&q=80",
@@ -356,35 +195,21 @@
             "https://actions.google.com/sounds/v1/ambiences/rain_heavy_loud.ogg"
         ];
 
-        // Core Systems Configuration
         let audioCtx;
-        let masterGainNode; // Parent master volume slider tracking node
+        let masterGainNode;
         let currentSourceNode = null;
         let currentTrackGainNode = null;
-        
+        let currentImageIndex = 0;
         let isMuted = false;
         let preMuteVolume = 1;
-        let activeEntry = '001';
-        let currentImageIndex = 0;
-        let revealImageStack = [];
-        let revealTopImage = null;
-        let revealReady = false;
-        let revealCycleIndex = 0;
-        let revealProgress = 0;
-        let revealIsAdvancing = false;
-        let circleImage = null;
-        let circleImageIndex = 0;
-        let circlePointerX = 0;
-        let circlePointerY = 0;
-        let circleTargetX = 0;
-        let circleTargetY = 0;
-        let circleAnimationId = null;
-        const FADE_DURATION = 4.0; // Audio crossfade overlap length (seconds)
-        const DRIFT_CLASSES = ['drift-a', 'drift-b', 'drift-c'];
-        const REVEAL_ADVANCE_THRESHOLD = 0.6;
 
-        // Inject background elements into standard browser template DOM
+        const FADE_DURATION = 4.0;
+        const IMAGE_INTERVAL = 14000;
+
         const bgContainer = document.getElementById('bg-container');
+        const volumeSlider = document.getElementById('volume-slider');
+        const muteBtn = document.getElementById('mute-btn');
+
         IMAGES.forEach((src, idx) => {
             const div = document.createElement('div');
             div.className = 'bg-slide';
@@ -393,347 +218,59 @@
             bgContainer.appendChild(div);
         });
 
-        const revealCanvas = document.getElementById('reveal-canvas');
-        const revealUnderCanvas = document.getElementById('reveal-under-canvas');
-        const circleMaskCanvas = document.getElementById('circle-mask-canvas');
-        const revealCtx = revealCanvas.getContext('2d', { alpha: true });
-        const revealUnderCtx = revealUnderCanvas.getContext('2d', { alpha: true });
-        const circleMaskCtx = circleMaskCanvas.getContext('2d', { alpha: true });
-
-        function loadImage(src) {
-            return new Promise((resolve, reject) => {
-                const img = new Image();
-                img.crossOrigin = 'anonymous';
-                img.onload = () => resolve(img);
-                img.onerror = reject;
-                img.src = src;
-            });
-        }
-
-        function drawImageCover(ctx, canvas, img) {
-            const canvasRatio = canvas.width / canvas.height;
-            const imageRatio = img.naturalWidth / img.naturalHeight;
-            let width = canvas.width;
-            let height = canvas.height;
-            let x = 0;
-            let y = 0;
-
-            if (imageRatio > canvasRatio) {
-                height = canvas.height;
-                width = height * imageRatio;
-                x = (canvas.width - width) / 2;
-            } else {
-                width = canvas.width;
-                height = width / imageRatio;
-                y = (canvas.height - height) / 2;
-            }
-
-            ctx.drawImage(img, x, y, width, height);
-        }
-
-        function resizeRevealCanvas() {
-            const dpr = window.devicePixelRatio || 1;
-            revealCanvas.width = Math.floor(window.innerWidth * dpr);
-            revealCanvas.height = Math.floor(window.innerHeight * dpr);
-            revealUnderCanvas.width = revealCanvas.width;
-            revealUnderCanvas.height = revealCanvas.height;
-            circleMaskCanvas.width = revealCanvas.width;
-            circleMaskCanvas.height = revealCanvas.height;
-            revealCanvas.style.width = `${window.innerWidth}px`;
-            revealCanvas.style.height = `${window.innerHeight}px`;
-            revealUnderCanvas.style.width = revealCanvas.style.width;
-            revealUnderCanvas.style.height = revealCanvas.style.height;
-            circleMaskCanvas.style.width = revealCanvas.style.width;
-            circleMaskCanvas.style.height = revealCanvas.style.height;
-            if (activeEntry === '002' && revealReady) {
-                renderRevealStack();
-            }
-            if (activeEntry === '003' && circleImage) {
-                renderCircleMasks();
-            }
-        }
-
-        function setVisibleBackground(index) {
-            const slides = document.querySelectorAll('.bg-slide');
-            slides.forEach(slide => slide.classList.remove('active', ...DRIFT_CLASSES));
-            if (slides[index]) {
-                const driftClass = DRIFT_CLASSES[Math.floor(Math.random() * DRIFT_CLASSES.length)];
-                slides[index].classList.add('active', driftClass);
-            }
-            currentImageIndex = index;
-        }
-
         function transitionImage() {
             const slides = document.querySelectorAll('.bg-slide');
             if (slides.length === 0) return;
-            const randomIndex = Math.floor(Math.random() * slides.length);
-            setVisibleBackground(randomIndex);
-        }
 
-        async function prepareRevealStack(advance = false) {
-            if (advance) {
-                revealCycleIndex = (revealCycleIndex + 1) % IMAGES.length;
-            } else {
-                revealCycleIndex = currentImageIndex;
-            }
-            const startIndex = revealCycleIndex;
-            const imageIndexes = IMAGES.map((_, idx) => (startIndex + idx) % IMAGES.length);
-            setVisibleBackground(imageIndexes[0]);
-
-            try {
-                const loadedImages = await Promise.all(imageIndexes.map(idx => loadImage(IMAGES[idx])));
-                revealImageStack = loadedImages.slice(0, Math.max(2, loadedImages.length - 1));
-                revealTopImage = loadedImages[loadedImages.length - 1];
-                revealReady = true;
-                revealProgress = 0;
-                renderRevealStack();
-                animateNewRevealSurface();
-            } catch (error) {
-                revealReady = false;
-                console.error('Reveal images could not be prepared:', error);
-            }
-        }
-
-        function renderRevealStack() {
-            revealUnderCtx.globalCompositeOperation = 'source-over';
-            revealUnderCtx.clearRect(0, 0, revealUnderCanvas.width, revealUnderCanvas.height);
-            revealImageStack.forEach((img, index) => {
-                revealUnderCtx.globalAlpha = index === 0 ? 1 : 0.42;
-                drawImageCover(revealUnderCtx, revealUnderCanvas, img);
-                if (index > 0) addRevealTexture(index);
-            });
-            revealUnderCtx.globalAlpha = 1;
-
-            revealCtx.globalCompositeOperation = 'source-over';
-            revealCtx.clearRect(0, 0, revealCanvas.width, revealCanvas.height);
-            drawImageCover(revealCtx, revealCanvas, revealTopImage);
-        }
-
-        function animateNewRevealSurface() {
-            revealCanvas.classList.remove('refreshing');
-            void revealCanvas.offsetWidth;
-            revealCanvas.classList.add('refreshing');
-        }
-
-        function addRevealTexture(seed) {
-            const dpr = window.devicePixelRatio || 1;
-            const bandCount = 10 + seed * 3;
-            revealUnderCtx.globalCompositeOperation = 'screen';
-            for (let i = 0; i < bandCount; i++) {
-                const horizontal = Math.random() > 0.45;
-                const x = Math.random() * revealUnderCanvas.width;
-                const y = Math.random() * revealUnderCanvas.height;
-                const w = horizontal ? (80 + Math.random() * 260) * dpr : (14 + Math.random() * 44) * dpr;
-                const h = horizontal ? (14 + Math.random() * 44) * dpr : (80 + Math.random() * 260) * dpr;
-                revealUnderCtx.globalAlpha = 0.06 + Math.random() * 0.08;
-                revealUnderCtx.fillStyle = '#fff';
-                revealUnderCtx.fillRect(x, y, w, h);
-            }
-            revealUnderCtx.globalCompositeOperation = 'source-over';
-        }
-
-        function paintPixelReveal(event) {
-            if (activeEntry !== '002' || !revealReady) return;
-            const rect = revealCanvas.getBoundingClientRect();
-            const dpr = window.devicePixelRatio || 1;
-            const pressure = event.pressure && event.pressure > 0 ? event.pressure : 0.55;
-            const brushRadius = (44 + pressure * 96) * dpr;
-            const basePixel = (7 + Math.random() * 12) * dpr;
-            const x = (event.clientX - rect.left) * dpr;
-            const y = (event.clientY - rect.top) * dpr;
-            let revealedArea = 0;
-
-            revealCtx.globalCompositeOperation = 'destination-out';
-            for (let px = x - brushRadius; px <= x + brushRadius; px += basePixel) {
-                for (let py = y - brushRadius; py <= y + brushRadius; py += basePixel) {
-                    const dx = px - x;
-                    const dy = py - y;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
-                    const edgeFalloff = 1 - distance / brushRadius;
-                    if (edgeFalloff > 0 && Math.random() < edgeFalloff * 0.72) {
-                        const horizontal = Math.random() > 0.5;
-                        const width = basePixel * (horizontal ? 1.4 + Math.random() * 3.8 : 0.7 + Math.random() * 1.6);
-                        const height = basePixel * (horizontal ? 0.7 + Math.random() * 1.8 : 1.4 + Math.random() * 4.2);
-                        const jitterX = (Math.random() - 0.5) * basePixel * 1.5;
-                        const jitterY = (Math.random() - 0.5) * basePixel * 1.5;
-                        revealCtx.globalAlpha = 0.24 + edgeFalloff * (0.5 + Math.random() * 0.26);
-                        revealCtx.fillRect(px + jitterX, py + jitterY, width, height);
-                        revealedArea += width * height * revealCtx.globalAlpha;
-                    }
+            let nextIndex = Math.floor(Math.random() * slides.length);
+            if (slides.length > 1) {
+                while (nextIndex === currentImageIndex) {
+                    nextIndex = Math.floor(Math.random() * slides.length);
                 }
             }
-            revealCtx.globalAlpha = 1;
-            trackRevealProgress(revealedArea);
+
+            slides.forEach(slide => slide.classList.remove('active'));
+            slides[nextIndex].classList.add('active');
+            currentImageIndex = nextIndex;
         }
 
-        function trackRevealProgress(revealedArea) {
-            if (revealIsAdvancing || revealedArea <= 0) return;
-            const canvasArea = revealCanvas.width * revealCanvas.height;
-            revealProgress = Math.min(1, revealProgress + revealedArea / canvasArea);
-            if (revealProgress >= REVEAL_ADVANCE_THRESHOLD) {
-                revealIsAdvancing = true;
-                setTimeout(async () => {
-                    await prepareRevealStack(true);
-                    revealIsAdvancing = false;
-                }, 360);
-            }
-        }
-
-        async function prepareCircleMasks(advance = false) {
-            circleImageIndex = advance ? (circleImageIndex + 1) % IMAGES.length : currentImageIndex;
-            setVisibleBackground(circleImageIndex);
-            try {
-                circleImage = await loadImage(IMAGES[circleImageIndex]);
-                circlePointerX = 0;
-                circlePointerY = 0;
-                circleTargetX = 0;
-                circleTargetY = 0;
-                startCircleAnimation();
-            } catch (error) {
-                console.error('Circle mask image could not be prepared:', error);
-            }
-        }
-
-        function startCircleAnimation() {
-            if (circleAnimationId) cancelAnimationFrame(circleAnimationId);
-            const tick = () => {
-                if (activeEntry !== '003') {
-                    circleAnimationId = null;
-                    return;
-                }
-                circlePointerX += (circleTargetX - circlePointerX) * 0.08;
-                circlePointerY += (circleTargetY - circlePointerY) * 0.08;
-                renderCircleMasks();
-                circleAnimationId = requestAnimationFrame(tick);
-            };
-            tick();
-        }
-
-        function renderCircleMasks() {
-            if (!circleImage) return;
-            const width = circleMaskCanvas.width;
-            const height = circleMaskCanvas.height;
-            const centerX = width / 2;
-            const centerY = height / 2;
-            const maxRadius = Math.hypot(width, height) * 0.58;
-            const ringCount = 12;
-
-            circleMaskCtx.clearRect(0, 0, width, height);
-            circleMaskCtx.fillStyle = '#050505';
-            circleMaskCtx.fillRect(0, 0, width, height);
-
-            for (let i = ringCount; i >= 1; i--) {
-                const radius = (maxRadius / ringCount) * i;
-                const nextRadius = (maxRadius / ringCount) * (i - 0.52);
-                const offsetStrength = (ringCount - i + 1) / ringCount;
-                const offsetX = circlePointerX * offsetStrength * 46;
-                const offsetY = circlePointerY * offsetStrength * 38;
-
-                circleMaskCtx.save();
-                circleMaskCtx.beginPath();
-                circleMaskCtx.arc(centerX + offsetX, centerY + offsetY, radius, 0, Math.PI * 2);
-                if (nextRadius > 0) {
-                    circleMaskCtx.arc(centerX + offsetX * 0.72, centerY + offsetY * 0.72, nextRadius, 0, Math.PI * 2, true);
-                }
-                circleMaskCtx.clip('evenodd');
-                circleMaskCtx.globalAlpha = 0.72 + offsetStrength * 0.28;
-                circleMaskCtx.filter = `contrast(${1.08 + offsetStrength * 0.42}) saturate(${1.05 + offsetStrength * 0.34})`;
-                drawImageCover(circleMaskCtx, circleMaskCanvas, circleImage);
-                circleMaskCtx.restore();
-            }
-
-            circleMaskCtx.globalAlpha = 1;
-            circleMaskCtx.filter = 'none';
-        }
-
-        function updateCirclePointer(event) {
-            if (activeEntry !== '003') return;
-            const rect = circleMaskCanvas.getBoundingClientRect();
-            circleTargetX = ((event.clientX - rect.left) / rect.width - 0.5) * 2;
-            circleTargetY = ((event.clientY - rect.top) / rect.height - 0.5) * 2;
-        }
-
-        function switchEntry(entry) {
-            activeEntry = entry;
-            document.body.classList.toggle('entry-001', entry === '001');
-            document.body.classList.toggle('entry-002', entry === '002');
-            document.body.classList.toggle('entry-003', entry === '003');
-            document.querySelectorAll('.journal-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.entry === entry);
-            });
-
-            if (entry === '002') {
-                revealUnderCanvas.classList.add('active');
-                revealCanvas.classList.add('active');
-                circleMaskCanvas.classList.remove('active');
-                revealCycleIndex = currentImageIndex;
-                prepareRevealStack();
-            } else if (entry === '003') {
-                revealUnderCanvas.classList.remove('active');
-                revealCanvas.classList.remove('active');
-                circleMaskCanvas.classList.add('active');
-                revealReady = false;
-                revealIsAdvancing = false;
-                prepareCircleMasks();
-            } else {
-                revealUnderCanvas.classList.remove('active');
-                revealCanvas.classList.remove('active');
-                circleMaskCanvas.classList.remove('active');
-                revealReady = false;
-                revealIsAdvancing = false;
-                if (circleAnimationId) cancelAnimationFrame(circleAnimationId);
-                circleAnimationId = null;
-                transitionImage();
-            }
-        }
-
-        // Web Audio Mixing Engine
         async function playRandomAudioTrack() {
             if (!audioCtx) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                // Set up baseline Master volume gain routing
                 masterGainNode = audioCtx.createGain();
                 masterGainNode.connect(audioCtx.destination);
                 masterGainNode.gain.value = parseFloat(volumeSlider.value);
             }
 
             if (AUDIO_TRACKS.length === 0) return;
-            const randomTrackIndex = Math.floor(Math.random() * AUDIO_TRACKS.length);
-            const trackUrl = AUDIO_TRACKS[randomTrackIndex];
-            
+            const trackUrl = AUDIO_TRACKS[Math.floor(Math.random() * AUDIO_TRACKS.length)];
+
             try {
                 const response = await fetch(trackUrl);
                 const arrayBuffer = await response.arrayBuffer();
                 const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
 
                 const newSourceNode = audioCtx.createBufferSource();
-                newSourceNode.buffer = audioBuffer;
-
                 const newTrackGainNode = audioCtx.createGain();
-                newTrackGainNode.gain.setValueAtTime(0, audioCtx.currentTime); // Start track completely silent
+                const now = audioCtx.currentTime;
 
-                // Route: Individual Source Audio Track Node -> Dynamic Volume Mixer -> Final Audio Driver output
+                newSourceNode.buffer = audioBuffer;
+                newTrackGainNode.gain.setValueAtTime(0, now);
                 newSourceNode.connect(newTrackGainNode);
                 newTrackGainNode.connect(masterGainNode);
 
-                const now = audioCtx.currentTime;
-
-                // Seamlessly crossfade active tracks
                 if (currentTrackGainNode && currentSourceNode) {
                     const oldGain = currentTrackGainNode;
                     const oldSource = currentSourceNode;
-                    
                     oldGain.gain.setValueAtTime(oldGain.gain.value, now);
                     oldGain.gain.linearRampToValueAtTime(0, now + FADE_DURATION);
-                    
                     setTimeout(() => {
-                        try { oldSource.stop(); } catch(e) {}
+                        try { oldSource.stop(); } catch (error) {}
                     }, FADE_DURATION * 1000);
                 }
 
                 newSourceNode.start(now);
                 newTrackGainNode.gain.linearRampToValueAtTime(1, now + FADE_DURATION);
-
                 currentSourceNode = newSourceNode;
                 currentTrackGainNode = newTrackGainNode;
 
@@ -742,9 +279,8 @@
                         triggerNextCycle();
                     }
                 };
-
             } catch (error) {
-                console.error("Audio target skipped or execution stalled. Verify hosting permissions:", error);
+                console.error("Audio target skipped. Verify hosting permissions:", error);
             }
         }
 
@@ -753,54 +289,24 @@
             playRandomAudioTrack();
         }
 
-        // Action Trigger Listeners
         document.getElementById('start-btn').addEventListener('click', () => {
-            document.getElementById('setup-overlay').style.opacity = '0';
-            setTimeout(() => document.getElementById('setup-overlay').style.display = 'none', 500);
-            
+            const overlay = document.getElementById('setup-overlay');
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.style.display = 'none';
+            }, 500);
+
             document.getElementById('control-panel').classList.add('visible');
-            document.getElementById('journal-panel').classList.add('visible');
-            
             triggerNextCycle();
-            setInterval(() => {
-                if (activeEntry === '001') transitionImage();
-            }, 12000); // Entry 001 transitions a new photo mix every 12 seconds independently
+            setInterval(transitionImage, IMAGE_INTERVAL);
         });
 
-        document.getElementById('next-btn').addEventListener('click', () => {
-            if (activeEntry === '002') {
-                prepareRevealStack(true);
-                playRandomAudioTrack();
-            } else if (activeEntry === '003') {
-                prepareCircleMasks(true);
-                playRandomAudioTrack();
-            } else {
-                triggerNextCycle();
-            }
-        });
+        document.getElementById('next-btn').addEventListener('click', triggerNextCycle);
 
-        document.querySelectorAll('.journal-btn').forEach(btn => {
-            btn.addEventListener('click', () => switchEntry(btn.dataset.entry));
-        });
-
-        revealCanvas.addEventListener('pointerdown', (event) => {
-            revealCanvas.setPointerCapture(event.pointerId);
-            paintPixelReveal(event);
-        });
-        revealCanvas.addEventListener('pointermove', paintPixelReveal);
-        circleMaskCanvas.addEventListener('pointermove', updateCirclePointer);
-        circleMaskCanvas.addEventListener('pointerdown', updateCirclePointer);
-        window.addEventListener('resize', resizeRevealCanvas);
-        resizeRevealCanvas();
-
-        // Sound Engine Value Controllers
-        const volumeSlider = document.getElementById('volume-slider');
-        const muteBtn = document.getElementById('mute-btn');
-
-        volumeSlider.addEventListener('input', (e) => {
-            const val = parseFloat(e.target.value);
+        volumeSlider.addEventListener('input', (event) => {
+            const val = parseFloat(event.target.value);
             if (masterGainNode) masterGainNode.gain.value = val;
-            
+
             if (val === 0) {
                 isMuted = true;
                 muteBtn.textContent = '❌';
