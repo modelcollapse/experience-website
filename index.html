@@ -214,7 +214,9 @@
             left: 20px;
             z-index: 3;
             display: flex;
+            flex-wrap: wrap;
             gap: 8px;
+            max-width: min(680px, calc(100vw - 40px));
             background: rgba(0, 0, 0, 0.4);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
@@ -386,6 +388,21 @@
         <button class="journal-btn" data-entry="002" title="002 Pixel reveal brush">002</button>
         <button class="journal-btn" data-entry="003" title="003 Concentric image masks">003</button>
         <button class="journal-btn" data-entry="004" title="004 Placeholder">004</button>
+        <button class="journal-btn" data-entry="005" title="005 p5Catalyst">005</button>
+        <button class="journal-btn" data-entry="006" title="006 PerlinNoiseSlider">006</button>
+        <button class="journal-btn" data-entry="007" title="007 ScanLines">007</button>
+        <button class="journal-btn" data-entry="008" title="008 TrailingCircle">008</button>
+        <button class="journal-btn" data-entry="009" title="009 CirclePatternSketch">009</button>
+        <button class="journal-btn" data-entry="010" title="010 CircleLine">010</button>
+        <button class="journal-btn" data-entry="011" title="011 imageslice">011</button>
+        <button class="journal-btn" data-entry="012" title="012 dot-connect">012</button>
+        <button class="journal-btn" data-entry="013" title="013 Wander-Web">013</button>
+        <button class="journal-btn" data-entry="014" title="014 GradientNodes">014</button>
+        <button class="journal-btn" data-entry="015" title="015 GradientDrag">015</button>
+        <button class="journal-btn" data-entry="016" title="016 ColorPills">016</button>
+        <button class="journal-btn" data-entry="017" title="017 AntiGravity_001">017</button>
+        <button class="journal-btn" data-entry="018" title="018 midi-experiments">018</button>
+        <button class="journal-btn" data-entry="019" title="019 digital-nature">019</button>
     </div>
 
     <script>
@@ -415,14 +432,44 @@
             "001": "ambient-cycle",
             "002": "hold",
             "003": "hold",
-            "004": "hold"
+            "004": "hold",
+            "005": "hold",
+            "006": "hold",
+            "007": "hold",
+            "008": "hold",
+            "009": "hold",
+            "010": "hold",
+            "011": "hold",
+            "012": "hold",
+            "013": "hold",
+            "014": "hold",
+            "015": "hold",
+            "016": "hold",
+            "017": "hold",
+            "018": "hold",
+            "019": "hold"
         };
 
         const SKETCH_LABELS = {
             "001": "Fade",
             "002": "Pixel Reveal",
             "003": "Concentric Masks",
-            "004": "Placeholder"
+            "004": "Placeholder",
+            "005": "p5Catalyst",
+            "006": "PerlinNoiseSlider",
+            "007": "ScanLines",
+            "008": "TrailingCircle",
+            "009": "CirclePatternSketch",
+            "010": "CircleLine",
+            "011": "imageslice",
+            "012": "dot-connect",
+            "013": "Wander-Web",
+            "014": "GradientNodes",
+            "015": "GradientDrag",
+            "016": "ColorPills",
+            "017": "AntiGravity_001",
+            "018": "midi-experiments",
+            "019": "digital-nature"
         };
 
         // Core Systems Configuration

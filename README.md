@@ -6,6 +6,21 @@ A single-page journal of numbered interactive ambience experiments.
 - `002`: Pixel dissolve reveal brush. Move or press over the image to fade rectangular pixels from the top layer and reveal a deeper blended image stack underneath. This sketch no longer auto-advances; use next when you want a new reveal layer.
 - `003`: Concentric circular image masks that offset in layered motion over a softened duplicate of the same image.
 - `004`: Placeholder for the next sketch.
+- `005`: p5Catalyst.
+- `006`: PerlinNoiseSlider.
+- `007`: ScanLines.
+- `008`: TrailingCircle.
+- `009`: CirclePatternSketch.
+- `010`: CircleLine.
+- `011`: imageslice.
+- `012`: dot-connect.
+- `013`: Wander-Web.
+- `014`: GradientNodes.
+- `015`: GradientDrag.
+- `016`: ColorPills.
+- `017`: AntiGravity_001.
+- `018`: midi-experiments.
+- `019`: digital-nature.
 
 Audio is shared across the journal. `001` can cycle the audio bed with the image fade, while `002` and `003` keep the current sound bed running as their visuals change.
 
