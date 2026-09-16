@@ -364,6 +364,8 @@
             <button class="journal-dot" data-entry="004" aria-label="004 Granular Shatter"></button>
             <button class="journal-dot" data-entry="005" aria-label="005 Additive Remix"></button>
             <button class="journal-dot" data-entry="006" aria-label="006 Radial Lens"></button>
+            <button class="journal-dot" data-entry="007" aria-label="007 Lomo Double Exposure"></button>
+            <button class="journal-dot" data-entry="008" aria-label="008 ActionSampler Double Exposure"></button>
         </div>
         <div id="audio-player">
             <div id="audio-readout" aria-live="polite">
@@ -442,8 +444,8 @@
             "004": "Granular Shatter",
             "005": "Additive Remix",
             "006": "Radial Lens",
-            "007": "ScanLines",
-            "008": "TrailingCircle",
+            "007": "Lomo Double Exposure",
+            "008": "ActionSampler Double Exposure",
             "009": "CirclePatternSketch",
             "010": "CircleLine",
             "011": "imageslice",
@@ -506,6 +508,14 @@
         let radialLensImage = null;
         let radialBaseIndex = 0;
         let radialLensIndex = 1;
+        let lomoBaseImage = null;
+        let lomoOverlayImage = null;
+        let lomoBaseIndex = 0;
+        let lomoOverlayIndex = 1;
+        let lomoLeakSeed = 0;
+        let actionSamplerImages = [];
+        let actionSamplerIndices = [];
+        let actionSamplerLeakSeed = 0;
         let glitchPointerDown = false;
         let lastGlitchX = 0;
         let lastGlitchY = 0;
@@ -631,6 +641,12 @@
             }
             if (activeEntry === '006') {
                 renderRadialLens();
+            }
+            if (activeEntry === '007') {
+                renderLomoDoubleExposure();
+            }
+            if (activeEntry === '008') {
+                renderActionSampler();
             }
             if (activeEntry === '005') {
                 prepareAdditiveRemix(false);
@@ -1366,6 +1382,224 @@
             prepareRadialLens(true);
         }
 
+        async function prepareLomoDoubleExposure(randomize = false) {
+            lomoBaseIndex = randomize ? randomImageIndex(lomoBaseIndex) : currentImageIndex;
+            lomoOverlayIndex = randomImageIndex(lomoBaseIndex);
+            lomoLeakSeed = Math.random();
+            setVisibleBackground(lomoBaseIndex);
+            try {
+                [lomoBaseImage, lomoOverlayImage] = await Promise.all([
+                    loadImage(IMAGES[lomoBaseIndex]),
+                    loadImage(IMAGES[lomoOverlayIndex])
+                ]);
+                renderLomoDoubleExposure();
+            } catch (error) {
+                console.error('Lomo double exposure images could not be prepared:', error);
+            }
+        }
+
+        function renderLomoDoubleExposure() {
+            if (!lomoBaseImage || !lomoOverlayImage) return;
+            const width = processingCanvas.width;
+            const height = processingCanvas.height;
+            const dpr = window.devicePixelRatio || 1;
+            const offsetX = (processingPointerX - 0.5) * width * 0.12;
+            const offsetY = (processingPointerY - 0.5) * height * 0.08;
+            processingCtx.clearRect(0, 0, width, height);
+
+            processingCtx.save();
+            processingCtx.filter = 'saturate(1.65) contrast(1.2) brightness(0.9)';
+            drawImageCover(processingCtx, processingCanvas, lomoBaseImage);
+            processingCtx.globalCompositeOperation = 'screen';
+            processingCtx.globalAlpha = 0.62;
+            processingCtx.translate(offsetX, offsetY);
+            processingCtx.filter = 'saturate(1.25) contrast(1.35) hue-rotate(-8deg)';
+            drawImageCoverScaledFromPoint(
+                processingCtx,
+                processingCanvas,
+                lomoOverlayImage,
+                width * 0.5,
+                height * 0.5,
+                1.06
+            );
+            processingCtx.restore();
+
+            processingCtx.save();
+            processingCtx.globalCompositeOperation = 'screen';
+            const leakFromLeft = lomoLeakSeed > 0.5;
+            const leakX = leakFromLeft ? width * -0.04 : width * 1.04;
+            const leakY = height * (0.18 + lomoLeakSeed * 0.64);
+            const leak = processingCtx.createRadialGradient(
+                leakX, leakY, 0,
+                leakX, leakY, Math.max(width, height) * 0.72
+            );
+            leak.addColorStop(0, 'rgba(255, 245, 190, 0.92)');
+            leak.addColorStop(0.12, 'rgba(255, 138, 48, 0.7)');
+            leak.addColorStop(0.36, 'rgba(220, 20, 68, 0.42)');
+            leak.addColorStop(0.7, 'rgba(90, 0, 46, 0.08)');
+            leak.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            processingCtx.fillStyle = leak;
+            processingCtx.fillRect(0, 0, width, height);
+            processingCtx.restore();
+
+            processingCtx.save();
+            const vignette = processingCtx.createRadialGradient(
+                width * 0.5, height * 0.48, Math.min(width, height) * 0.2,
+                width * 0.5, height * 0.5, Math.max(width, height) * 0.68
+            );
+            vignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            vignette.addColorStop(0.68, 'rgba(0, 0, 0, 0.08)');
+            vignette.addColorStop(1, 'rgba(0, 0, 0, 0.82)');
+            processingCtx.fillStyle = vignette;
+            processingCtx.fillRect(0, 0, width, height);
+
+            processingCtx.globalCompositeOperation = 'soft-light';
+            for (let i = 0; i < 420; i++) {
+                const value = Math.random() > 0.52 ? 255 : 0;
+                processingCtx.fillStyle = `rgba(${value}, ${value}, ${value}, ${0.025 + Math.random() * 0.07})`;
+                const size = (0.6 + Math.random() * 1.8) * dpr;
+                processingCtx.fillRect(Math.random() * width, Math.random() * height, size, size);
+            }
+            processingCtx.restore();
+        }
+
+        function updateLomoPointer(event) {
+            if (activeEntry !== '007') return;
+            const rect = processingCanvas.getBoundingClientRect();
+            processingPointerX = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+            processingPointerY = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
+            renderLomoDoubleExposure();
+        }
+
+        function handleLomoPointerDown(event) {
+            if (activeEntry !== '007') return;
+            updateLomoPointer(event);
+            prepareLomoDoubleExposure(true);
+        }
+
+        async function prepareActionSampler(randomize = false) {
+            if (randomize || actionSamplerIndices.length !== 8) {
+                actionSamplerIndices = [];
+                let previous = -1;
+                for (let i = 0; i < 8; i++) {
+                    previous = randomImageIndex(previous);
+                    actionSamplerIndices.push(previous);
+                }
+            }
+            actionSamplerLeakSeed = Math.random();
+            setVisibleBackground(actionSamplerIndices[0]);
+            try {
+                actionSamplerImages = await Promise.all(
+                    actionSamplerIndices.map(index => loadImage(IMAGES[index]))
+                );
+                renderActionSampler();
+            } catch (error) {
+                console.error('ActionSampler images could not be prepared:', error);
+            }
+        }
+
+        function renderActionSampler() {
+            if (actionSamplerImages.length !== 8) return;
+            const width = processingCanvas.width;
+            const height = processingCanvas.height;
+            const dpr = window.devicePixelRatio || 1;
+            const gutter = Math.max(3 * dpr, Math.min(width, height) * 0.008);
+            const tileWidth = (width - gutter * 3) / 2;
+            const tileHeight = (height - gutter * 3) / 2;
+            const driftX = (processingPointerX - 0.5) * width * 0.04;
+            const driftY = (processingPointerY - 0.5) * height * 0.03;
+            processingCtx.clearRect(0, 0, width, height);
+            processingCtx.fillStyle = '#080706';
+            processingCtx.fillRect(0, 0, width, height);
+
+            for (let frame = 0; frame < 4; frame++) {
+                const column = frame % 2;
+                const row = Math.floor(frame / 2);
+                const x = gutter + column * (tileWidth + gutter);
+                const y = gutter + row * (tileHeight + gutter);
+                const centerX = x + tileWidth * 0.5;
+                const centerY = y + tileHeight * 0.5;
+
+                processingCtx.save();
+                processingCtx.beginPath();
+                processingCtx.rect(x, y, tileWidth, tileHeight);
+                processingCtx.clip();
+                processingCtx.translate((frame - 1.5) * driftX * 0.32, (1.5 - frame) * driftY * 0.22);
+                processingCtx.filter = 'saturate(1.55) contrast(1.22) brightness(0.88)';
+                drawImageCoverScaledFromPoint(
+                    processingCtx,
+                    processingCanvas,
+                    actionSamplerImages[frame],
+                    centerX,
+                    centerY,
+                    1.08 + frame * 0.015
+                );
+                processingCtx.globalCompositeOperation = 'screen';
+                processingCtx.globalAlpha = 0.56;
+                processingCtx.translate(driftX * (frame % 2 ? -1 : 1), driftY * (frame < 2 ? 1 : -1));
+                processingCtx.filter = 'saturate(1.35) contrast(1.35) hue-rotate(-10deg)';
+                drawImageCoverScaledFromPoint(
+                    processingCtx,
+                    processingCanvas,
+                    actionSamplerImages[frame + 4],
+                    centerX,
+                    centerY,
+                    1.12
+                );
+                processingCtx.restore();
+
+                processingCtx.save();
+                processingCtx.beginPath();
+                processingCtx.rect(x, y, tileWidth, tileHeight);
+                processingCtx.clip();
+                processingCtx.globalCompositeOperation = 'screen';
+                const leakX = x + tileWidth * (actionSamplerLeakSeed > 0.5 ? 0.08 : 0.92);
+                const leakY = y + tileHeight * ((frame + 1) / 5);
+                const leak = processingCtx.createRadialGradient(
+                    leakX, leakY, 0,
+                    leakX, leakY, Math.max(tileWidth, tileHeight) * 0.72
+                );
+                leak.addColorStop(0, 'rgba(255, 220, 135, 0.5)');
+                leak.addColorStop(0.28, 'rgba(238, 48, 46, 0.28)');
+                leak.addColorStop(1, 'rgba(80, 0, 30, 0)');
+                processingCtx.fillStyle = leak;
+                processingCtx.fillRect(x, y, tileWidth, tileHeight);
+                processingCtx.restore();
+            }
+
+            processingCtx.save();
+            const vignette = processingCtx.createRadialGradient(
+                width * 0.5, height * 0.5, Math.min(width, height) * 0.22,
+                width * 0.5, height * 0.5, Math.max(width, height) * 0.72
+            );
+            vignette.addColorStop(0, 'rgba(0,0,0,0)');
+            vignette.addColorStop(1, 'rgba(0,0,0,0.7)');
+            processingCtx.fillStyle = vignette;
+            processingCtx.fillRect(0, 0, width, height);
+            processingCtx.globalCompositeOperation = 'soft-light';
+            for (let i = 0; i < 300; i++) {
+                const value = Math.random() > 0.5 ? 255 : 0;
+                processingCtx.fillStyle = `rgba(${value},${value},${value},${0.03 + Math.random() * 0.07})`;
+                const size = (0.7 + Math.random() * 1.5) * dpr;
+                processingCtx.fillRect(Math.random() * width, Math.random() * height, size, size);
+            }
+            processingCtx.restore();
+        }
+
+        function updateActionSamplerPointer(event) {
+            if (activeEntry !== '008') return;
+            const rect = processingCanvas.getBoundingClientRect();
+            processingPointerX = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+            processingPointerY = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
+            renderActionSampler();
+        }
+
+        function handleActionSamplerPointerDown(event) {
+            if (activeEntry !== '008') return;
+            updateActionSamplerPointer(event);
+            prepareActionSampler(true);
+        }
+
         function clearInteractiveLayers() {
             revealUnderCanvas.classList.remove('active');
             revealCanvas.classList.remove('active');
@@ -1412,6 +1646,14 @@
                 clearInteractiveLayers();
                 processingCanvas.classList.add('active');
                 prepareRadialLens(randomize);
+            } else if (entry === '007') {
+                clearInteractiveLayers();
+                processingCanvas.classList.add('active');
+                prepareLomoDoubleExposure(randomize);
+            } else if (entry === '008') {
+                clearInteractiveLayers();
+                processingCanvas.classList.add('active');
+                prepareActionSampler(randomize);
             } else if (entry === '001') {
                 clearInteractiveLayers();
                 processingCanvas.classList.add('active');
@@ -1526,6 +1768,10 @@
                 prepareAdditiveRemix(true);
             } else if (activeEntry === '006') {
                 prepareRadialLens(true);
+            } else if (activeEntry === '007') {
+                prepareLomoDoubleExposure(true);
+            } else if (activeEntry === '008') {
+                prepareActionSampler(true);
             } else {
                 transitionImage();
             }
@@ -1564,6 +1810,10 @@
         processingCanvas.addEventListener('pointermove', updateProcessingPointer);
         processingCanvas.addEventListener('pointerdown', updateProcessingPointer);
         processingCanvas.addEventListener('pointerdown', handleRadialPointerDown);
+        processingCanvas.addEventListener('pointermove', updateLomoPointer);
+        processingCanvas.addEventListener('pointerdown', handleLomoPointerDown);
+        processingCanvas.addEventListener('pointermove', updateActionSamplerPointer);
+        processingCanvas.addEventListener('pointerdown', handleActionSamplerPointerDown);
         processingCanvas.addEventListener('pointermove', handleGlitchPointerMove);
         processingCanvas.addEventListener('pointerdown', handleGlitchPointerDown);
         processingCanvas.addEventListener('pointerup', handleGlitchPointerUp);

@@ -8,8 +8,8 @@ A single-page journal of numbered interactive ambience experiments.
 - `004`: Granular shatter: click refreshes the composition; rollover and drag add sampled image shards that burst, drift, and fade.
 - `005`: Additive remix: click refreshes a dense field of circular photo samples; rollover and drag add more sampled circles.
 - `006`: Radial lens: a colorful blurred photo field with a black-and-white circular zoom study from another photo.
-- `007`: ScanLines.
-- `008`: TrailingCircle.
+- `007`: Lomo double exposure: two offset photographs, saturated toy-camera color, film grain, vignette, and irregular edge light leaks.
+- `008`: ActionSampler double exposure: four sequential frames, each made from two overlapping photographs with toy-camera grain, color, and light leaks.
 - `009`: CirclePatternSketch.
 - `010`: CircleLine.
 - `011`: imageslice.
