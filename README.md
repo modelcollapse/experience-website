@@ -5,7 +5,7 @@ A single-page journal of numbered interactive ambience experiments.
 - `001`: Slow photo fade with audio track name, playback time, pointer-driven datamosh smears, and broken-LCD vertical color lines from the next image.
 - `002`: Rollover pixel reveal with three image layers and a scattered circular brush.
 - `003`: Concentric duplicate-image masks that rotate and offset over the matching base image.
-- `004`: Granular shatter: sampled image shards burst, drift, and fade from pointer input.
+- `004`: Granular shatter: click refreshes the composition; rollover and drag add sampled image shards that burst, drift, and fade.
 - `005`: p5Catalyst.
 - `006`: PerlinNoiseSlider first pass: an in-browser generative noise field with pointer-controlled spacing, speed, and glow.
 - `007`: ScanLines.

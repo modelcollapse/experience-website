@@ -492,6 +492,9 @@
         let shatterImageIndex = 0;
         let shatterParticles = [];
         let shatterAnimationId = null;
+        let shatterPointerDownX = 0;
+        let shatterPointerDownY = 0;
+        let shatterPointerMoved = false;
         let glitchPointerDown = false;
         let lastGlitchX = 0;
         let lastGlitchY = 0;
@@ -963,7 +966,8 @@
             shatterImageIndex = randomize ? randomImageIndex(shatterImageIndex) : currentImageIndex;
             setVisibleBackground(shatterImageIndex);
             try {
-                shatterImage = await loadImage(IMAGES[(shatterImageIndex + 1) % IMAGES.length]);
+                const sampleIndex = randomize ? randomImageIndex(shatterImageIndex) : (shatterImageIndex + 1) % IMAGES.length;
+                shatterImage = await loadImage(IMAGES[sampleIndex]);
                 shatterParticles = [];
                 processingCtx.clearRect(0, 0, processingCanvas.width, processingCanvas.height);
                 createShatterBurst(processingCanvas.width * 0.5, processingCanvas.height * 0.5, 120);
@@ -1054,13 +1058,41 @@
             processingCtx.restore();
         }
 
-        function handleShatterPointer(event) {
-            if (activeEntry !== '004') return;
+        function getShatterPoint(event) {
             const dpr = window.devicePixelRatio || 1;
             const rect = processingCanvas.getBoundingClientRect();
-            const x = (event.clientX - rect.left) * dpr;
-            const y = (event.clientY - rect.top) * dpr;
-            createShatterBurst(x, y, event.buttons === 1 ? 70 : 34);
+            return {
+                x: (event.clientX - rect.left) * dpr,
+                y: (event.clientY - rect.top) * dpr
+            };
+        }
+
+        function handleShatterPointerDown(event) {
+            if (activeEntry !== '004') return;
+            shatterPointerDownX = event.clientX;
+            shatterPointerDownY = event.clientY;
+            shatterPointerMoved = false;
+            processingCanvas.setPointerCapture(event.pointerId);
+        }
+
+        function handleShatterPointerMove(event) {
+            if (activeEntry !== '004') return;
+            const dx = event.clientX - shatterPointerDownX;
+            const dy = event.clientY - shatterPointerDownY;
+            if (event.buttons === 1 && Math.hypot(dx, dy) > 5) {
+                shatterPointerMoved = true;
+            }
+
+            const point = getShatterPoint(event);
+            createShatterBurst(point.x, point.y, event.buttons === 1 ? 72 : 22);
+        }
+
+        function handleShatterPointerUp(event) {
+            if (activeEntry !== '004') return;
+            processingCanvas.releasePointerCapture(event.pointerId);
+            if (!shatterPointerMoved) {
+                prepareShatter(true);
+            }
         }
 
         function handleRevealPointerDown(event) {
@@ -1356,8 +1388,10 @@
         processingCanvas.addEventListener('pointerdown', handleGlitchPointerDown);
         processingCanvas.addEventListener('pointerup', handleGlitchPointerUp);
         processingCanvas.addEventListener('pointercancel', handleGlitchPointerUp);
-        processingCanvas.addEventListener('pointermove', handleShatterPointer);
-        processingCanvas.addEventListener('pointerdown', handleShatterPointer);
+        processingCanvas.addEventListener('pointerdown', handleShatterPointerDown);
+        processingCanvas.addEventListener('pointermove', handleShatterPointerMove);
+        processingCanvas.addEventListener('pointerup', handleShatterPointerUp);
+        processingCanvas.addEventListener('pointercancel', handleShatterPointerUp);
         window.addEventListener('resize', resizeRevealCanvas);
         resizeRevealCanvas();
         updateAudioReadout();
