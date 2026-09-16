@@ -520,6 +520,8 @@
         let lastGlitchX = 0;
         let lastGlitchY = 0;
         let glitchFadeAnimationId = null;
+        const GLITCH_MODES = ['schifty', 'chimera', 'gazette', 'manticore', 'feedback'];
+        let glitchModeIndex = 0;
         const imageCache = new Map();
         let loaderTimeout = null;
         const FADE_DURATION = 4.0; // Audio crossfade overlap length (seconds)
@@ -669,7 +671,14 @@
             const randomIndex = randomImageIndex(currentImageIndex);
             setVisibleBackground(randomIndex);
             if (activeEntry === '001') {
-                processingCtx.clearRect(0, 0, processingCanvas.width, processingCanvas.height);
+                let nextMode = Math.floor(Math.random() * GLITCH_MODES.length);
+                if (GLITCH_MODES.length > 1) {
+                    while (nextMode === glitchModeIndex) {
+                        nextMode = Math.floor(Math.random() * GLITCH_MODES.length);
+                    }
+                }
+                glitchModeIndex = nextMode;
+                seedGlitchTransition();
             }
         }
 
@@ -699,6 +708,21 @@
             tick();
         }
 
+        function seedGlitchTransition() {
+            const rect = processingCanvas.getBoundingClientRect();
+            if (!rect.width || !rect.height) return;
+            const passes = GLITCH_MODES[glitchModeIndex] === 'feedback' ? 12 : 7;
+            lastGlitchX = 0;
+            lastGlitchY = 0;
+            for (let i = 0; i < passes; i++) {
+                const event = {
+                    clientX: rect.left + rect.width * (0.12 + Math.random() * 0.76),
+                    clientY: rect.top + rect.height * (0.12 + Math.random() * 0.76)
+                };
+                setTimeout(() => drawGlitchAt(event, true), i * 34);
+            }
+        }
+
         async function drawGlitchAt(event, smear = false) {
             if (activeEntry !== '001') return;
             const dpr = window.devicePixelRatio || 1;
@@ -708,27 +732,34 @@
             const velocityX = lastGlitchX ? x - lastGlitchX : 0;
             const velocityY = lastGlitchY ? y - lastGlitchY : 0;
             const motion = Math.min(160 * dpr, Math.hypot(velocityX, velocityY));
+            const mode = GLITCH_MODES[glitchModeIndex];
             const sourceIndex = (currentImageIndex + 1) % IMAGES.length;
             const img = await loadImage(IMAGES[sourceIndex]);
             if (activeEntry !== '001') return;
             const cover = getCoverRect(processingCanvas, img);
             const sourceX = ((x - cover.x) / cover.width) * img.naturalWidth;
             const sourceY = ((y - cover.y) / cover.height) * img.naturalHeight;
-            const pixel = (smear ? 8 + Math.random() * 22 : 13 + Math.random() * 24) * dpr;
-            const count = smear ? 30 : 16;
+            const pixelScale = mode === 'gazette' ? 1.45 : mode === 'chimera' ? 0.72 : 1;
+            const pixel = (smear ? 8 + Math.random() * 22 : 13 + Math.random() * 24) * dpr * pixelScale;
+            const count = smear ? (mode === 'manticore' ? 42 : 30) : (mode === 'chimera' ? 24 : 16);
 
             if (smear) {
                 processingCtx.save();
                 processingCtx.imageSmoothingEnabled = false;
-                processingCtx.globalAlpha = 0.52;
-                const feedbackCount = 7;
+                processingCtx.globalAlpha = mode === 'schifty' ? 0.68 : mode === 'feedback' ? 0.4 : 0.52;
+                const feedbackCount = mode === 'schifty' ? 13 : mode === 'feedback' ? 18 : 7;
                 for (let i = 0; i < feedbackCount; i++) {
-                    const bandW = (28 + Math.random() * 120) * dpr;
-                    const bandH = (4 + Math.random() * 18) * dpr;
+                    const verticalTear = mode === 'manticore';
+                    const bandW = (verticalTear ? 5 + Math.random() * 22 : 28 + Math.random() * 150) * dpr;
+                    const bandH = (verticalTear ? 45 + Math.random() * 190 : mode === 'feedback' ? 12 + Math.random() * 48 : 4 + Math.random() * 18) * dpr;
                     const srcX = Math.max(0, Math.min(processingCanvas.width - bandW, x - bandW * 0.5 + (Math.random() - 0.5) * 90 * dpr));
                     const srcY = Math.max(0, Math.min(processingCanvas.height - bandH, y + (Math.random() - 0.5) * 110 * dpr));
-                    const dragX = (velocityX * (1.2 + Math.random() * 3.8)) + (Math.random() - 0.5) * 42 * dpr;
-                    const dragY = velocityY * (0.08 + Math.random() * 0.28);
+                    const dragX = verticalTear
+                        ? velocityX * 0.15
+                        : (velocityX * (1.2 + Math.random() * 3.8)) + (Math.random() - 0.5) * 42 * dpr;
+                    const dragY = verticalTear
+                        ? velocityY * (1.4 + Math.random() * 4.2) + (Math.random() - 0.5) * 55 * dpr
+                        : velocityY * (0.08 + Math.random() * 0.28);
                     processingCtx.drawImage(
                         processingCanvas,
                         srcX,
@@ -737,8 +768,8 @@
                         bandH,
                         srcX + dragX,
                         srcY + dragY,
-                        bandW * (1.15 + Math.random() * 1.7),
-                        bandH
+                        verticalTear ? bandW : bandW * (mode === 'feedback' ? 1.02 + Math.random() * 0.4 : 1.15 + Math.random() * 1.7),
+                        verticalTear ? bandH * (1.1 + Math.random() * 1.6) : bandH
                     );
                 }
                 processingCtx.restore();
@@ -746,8 +777,8 @@
 
             processingCtx.save();
             processingCtx.globalCompositeOperation = 'screen';
-            processingCtx.globalAlpha = smear ? 0.42 : 0.24;
-            const lcdCount = smear ? 8 : 4;
+            processingCtx.globalAlpha = mode === 'chimera' ? (smear ? 0.68 : 0.48) : (smear ? 0.32 : 0.18);
+            const lcdCount = mode === 'chimera' ? (smear ? 18 : 11) : (smear ? 6 : 3);
             for (let i = 0; i < lcdCount; i++) {
                 const lineX = x + (Math.random() - 0.5) * (smear ? 160 : 70) * dpr;
                 const lineHeight = (smear ? 90 + Math.random() * 360 : 36 + Math.random() * 120) * dpr;
@@ -765,6 +796,18 @@
             processingCtx.save();
             processingCtx.imageSmoothingEnabled = false;
             processingCtx.globalAlpha = smear ? 0.92 : 0.96;
+            if (mode === 'gazette') {
+                processingCtx.filter = 'grayscale(1) contrast(4.5) brightness(1.12)';
+                processingCtx.globalCompositeOperation = 'hard-light';
+            } else if (mode === 'chimera') {
+                processingCtx.filter = 'saturate(2.8) contrast(1.55) hue-rotate(18deg)';
+                processingCtx.globalCompositeOperation = 'screen';
+            } else if (mode === 'manticore') {
+                processingCtx.filter = 'contrast(1.8) saturate(1.5)';
+            } else if (mode === 'feedback') {
+                processingCtx.filter = 'contrast(1.45) saturate(1.75)';
+                processingCtx.globalCompositeOperation = 'lighten';
+            }
 
             for (let i = 0; i < count; i++) {
                 const jitterX = (Math.random() - 0.5) * pixel * (smear ? 5 : 2);
@@ -774,10 +817,15 @@
                 const sw = Math.min(Math.max(2, (pixel * (smear ? 1.8 : 1)) / dpr), img.naturalWidth - sx);
                 const sh = Math.min(Math.max(2, (pixel * (smear ? 0.42 : 1)) / dpr), img.naturalHeight - sy);
                 const direction = velocityX === 0 ? (Math.random() > 0.5 ? 1 : -1) : Math.sign(velocityX);
-                const dw = smear ? pixel * (7 + Math.random() * 18 + motion * 0.04) : pixel * (1 + Math.random() * 1.8);
-                const dh = smear ? Math.max(3 * dpr, pixel * (0.24 + Math.random() * 0.5)) : pixel * (1 + Math.random() * 1.6);
-                const dx = x + jitterX - (direction < 0 ? dw : 0) + velocityX * (0.4 + Math.random() * 1.1);
-                const dy = y + jitterY;
+                const verticalTear = mode === 'manticore';
+                const dw = smear
+                    ? verticalTear ? Math.max(3 * dpr, pixel * (0.3 + Math.random() * 0.7)) : pixel * (7 + Math.random() * 18 + motion * 0.04)
+                    : pixel * (1 + Math.random() * 1.8);
+                const dh = smear
+                    ? verticalTear ? pixel * (8 + Math.random() * 22 + motion * 0.04) : Math.max(3 * dpr, pixel * (0.24 + Math.random() * 0.5))
+                    : pixel * (1 + Math.random() * 1.6);
+                const dx = x + jitterX - (!verticalTear && direction < 0 ? dw : 0) + velocityX * (verticalTear ? 0.12 : 0.4 + Math.random() * 1.1);
+                const dy = y + jitterY + (verticalTear ? velocityY * (0.5 + Math.random()) : 0);
                 processingCtx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
             }
 

@@ -2,7 +2,7 @@
 
 A single-page journal of numbered interactive ambience experiments.
 
-- `001`: Slow photo fade with audio track name, playback time, pointer-driven datamosh smears, and broken-LCD vertical color lines from the next image.
+- `001`: Slow photo fade with rotating buffer-inspired datamosh modes: horizontal block shifts, channel corruption, threshold fragments, vertical tears, and automatic frame-feedback transfer from the next image.
 - `002`: Rollover pixel reveal with three image layers and a scattered circular brush.
 - `003`: Concentric duplicate-image masks that rotate and offset over the matching base image.
 - `004`: Granular shatter: click refreshes the composition; rollover and drag add sampled image shards that burst, drift, and fade.
