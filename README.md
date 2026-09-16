@@ -2,10 +2,10 @@
 
 A single-page journal of numbered interactive ambience experiments.
 
-- `001`: Slow blur dissolve ambience with drifting photos, risograph-style color wash, dot grain, vignette, and crossfaded audio.
-- `002`: Pixel dissolve reveal brush. Move or press over the image to fade rectangular pixels from the top layer and reveal a deeper blended image stack underneath. This sketch no longer auto-advances; use next when you want a new reveal layer.
-- `003`: Concentric circular image masks that offset in layered motion over a softened duplicate of the same image.
-- `004`: Placeholder for the next sketch.
+- `001`: Slow photo fade with audio track name and playback time.
+- `002`: Pixel reveal with three image layers and a scattered circular brush.
+- `003`: Concentric duplicate-image masks that rotate and offset over the matching base image.
+- `004`: Hidden placeholder for the next sketch.
 - `005`: p5Catalyst.
 - `006`: PerlinNoiseSlider first pass: an in-browser generative noise field with pointer-controlled spacing, speed, and glow.
 - `007`: ScanLines.
