@@ -465,15 +465,11 @@
         let previousCircleImage = null;
         let circleFadeStart = 0;
         let circleImageIndex = 0;
-        let circlePointerX = 0;
-        let circlePointerY = 0;
-        let circleTargetX = 0;
-        let circleTargetY = 0;
         let circleSpin = 0;
-        let circleSpinTarget = 0;
-        let circleBlur = 0;
-        let circleBlurTarget = 0;
         let circleAnimationId = null;
+        let revealPointerDownX = 0;
+        let revealPointerDownY = 0;
+        let revealPointerMoved = false;
         let processingAnimationId = null;
         let processingPointerX = 0.5;
         let processingPointerY = 0.5;
@@ -646,7 +642,9 @@
 
             revealCtx.globalCompositeOperation = 'source-over';
             revealCtx.clearRect(0, 0, revealCanvas.width, revealCanvas.height);
+            revealCtx.globalAlpha = 0.92;
             drawImageCover(revealCtx, revealCanvas, revealTopImage);
+            revealCtx.globalAlpha = 1;
         }
 
         function animateNewRevealSurface() {
@@ -715,14 +713,7 @@
                 previousCircleImage = circleImage;
                 circleImage = loadedImage;
                 circleFadeStart = performance.now();
-                circlePointerX = 0;
-                circlePointerY = 0;
-                circleTargetX = 0;
-                circleTargetY = 0;
                 circleSpin = 0;
-                circleSpinTarget = 0;
-                circleBlur = 0;
-                circleBlurTarget = 0;
                 startCircleAnimation();
             } catch (error) {
                 console.error('Circle mask image could not be prepared:', error);
@@ -736,10 +727,7 @@
                     circleAnimationId = null;
                     return;
                 }
-                circlePointerX += (circleTargetX - circlePointerX) * 0.08;
-                circlePointerY += (circleTargetY - circlePointerY) * 0.08;
-                circleSpin += (circleSpinTarget - circleSpin) * 0.1;
-                circleBlur += (circleBlurTarget - circleBlur) * 0.1;
+                circleSpin += 0.006;
                 renderCircleMasks();
                 circleAnimationId = requestAnimationFrame(tick);
             };
@@ -759,17 +747,15 @@
                 const radius = (maxRadius / ringCount) * i;
                 const nextRadius = (maxRadius / ringCount) * (i - 0.52);
                 const offsetStrength = (ringCount - i + 1) / ringCount;
-                const offsetX = circlePointerX * offsetStrength * 66;
+                const offsetX = 0;
                 const offsetY = 0;
-                const scale = 1 + circlePointerY * offsetStrength * 0.08;
                 const rotation = circleSpin * (i % 2 === 0 ? 1 : -1) * (0.75 + offsetStrength * 2.2);
-                const imageOffsetX = circlePointerX * offsetStrength * 32;
+                const imageOffsetX = 0;
                 const imageOffsetY = 0;
 
                 circleMaskCtx.save();
                 circleMaskCtx.translate(centerX + offsetX, centerY + offsetY);
                 circleMaskCtx.rotate(rotation);
-                circleMaskCtx.scale(scale, scale);
                 circleMaskCtx.beginPath();
                 circleMaskCtx.arc(0, 0, radius, 0, Math.PI * 2);
                 if (nextRadius > 0) {
@@ -778,7 +764,7 @@
                 circleMaskCtx.clip('evenodd');
                 circleMaskCtx.translate(-centerX - offsetX + imageOffsetX, -centerY - offsetY + imageOffsetY);
                 circleMaskCtx.globalAlpha = alpha * (0.64 + offsetStrength * 0.28);
-                circleMaskCtx.filter = `blur(${circleBlur * offsetStrength * 4}px) contrast(${1.04 + offsetStrength * 0.24}) saturate(${1.02 + offsetStrength * 0.22}) brightness(${1.02 + offsetStrength * 0.08})`;
+                circleMaskCtx.filter = `contrast(${1.04 + offsetStrength * 0.24}) saturate(${1.02 + offsetStrength * 0.22}) brightness(${1.02 + offsetStrength * 0.08})`;
                 drawImageCover(circleMaskCtx, circleMaskCanvas, image);
                 circleMaskCtx.restore();
             }
@@ -796,19 +782,35 @@
             circleMaskCtx.filter = 'none';
         }
 
-        function updateCirclePointer(event) {
-            if (activeEntry !== '003') return;
-            const rect = circleMaskCanvas.getBoundingClientRect();
-            circleTargetX = ((event.clientX - rect.left) / rect.width - 0.5) * 2;
-            circleTargetY = ((event.clientY - rect.top) / rect.height - 0.5) * 2;
-            circleSpinTarget = circleTargetX * Math.PI * 1.1;
-            circleBlurTarget = Math.abs(circleTargetY);
-        }
-
         function handleCirclePointerDown(event) {
-            updateCirclePointer(event);
             prepareCircleMasks(true);
             playRandomAudioTrack();
+        }
+
+        function handleRevealPointerDown(event) {
+            revealPointerDownX = event.clientX;
+            revealPointerDownY = event.clientY;
+            revealPointerMoved = false;
+            revealCanvas.setPointerCapture(event.pointerId);
+        }
+
+        function handleRevealPointerMove(event) {
+            if (activeEntry !== '002') return;
+            if (event.buttons !== 1 && event.pointerType !== 'touch') return;
+            const dx = event.clientX - revealPointerDownX;
+            const dy = event.clientY - revealPointerDownY;
+            if (Math.hypot(dx, dy) > 4) {
+                revealPointerMoved = true;
+                paintPixelReveal(event);
+            }
+        }
+
+        function handleRevealPointerUp(event) {
+            if (activeEntry !== '002') return;
+            if (!revealPointerMoved) {
+                prepareRevealStack(true);
+                playRandomAudioTrack();
+            }
         }
 
         function pseudoNoise(x, y, t) {
@@ -1046,12 +1048,9 @@
             });
         });
 
-        revealCanvas.addEventListener('pointerdown', (event) => {
-            revealCanvas.setPointerCapture(event.pointerId);
-            paintPixelReveal(event);
-        });
-        revealCanvas.addEventListener('pointermove', paintPixelReveal);
-        circleMaskCanvas.addEventListener('pointermove', updateCirclePointer);
+        revealCanvas.addEventListener('pointerdown', handleRevealPointerDown);
+        revealCanvas.addEventListener('pointermove', handleRevealPointerMove);
+        revealCanvas.addEventListener('pointerup', handleRevealPointerUp);
         circleMaskCanvas.addEventListener('pointerdown', handleCirclePointerDown);
         processingCanvas.addEventListener('pointermove', updateProcessingPointer);
         processingCanvas.addEventListener('pointerdown', updateProcessingPointer);
