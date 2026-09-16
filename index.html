@@ -361,6 +361,7 @@
             <button class="journal-dot active" data-entry="001" aria-label="001 Fade"></button>
             <button class="journal-dot" data-entry="002" aria-label="002 Pixel Reveal"></button>
             <button class="journal-dot" data-entry="003" aria-label="003 Concentric Masks"></button>
+            <button class="journal-dot" data-entry="004" aria-label="004 Granular Shatter"></button>
         </div>
         <div id="audio-player">
             <div id="audio-readout" aria-live="polite">
@@ -436,7 +437,7 @@
             "001": "Fade",
             "002": "Pixel Reveal",
             "003": "Concentric Masks",
-            "004": "Placeholder",
+            "004": "Granular Shatter",
             "005": "p5Catalyst",
             "006": "PerlinNoiseSlider",
             "007": "ScanLines",
@@ -487,6 +488,10 @@
         let processingPointerX = 0.5;
         let processingPointerY = 0.5;
         let processingTime = 0;
+        let shatterImage = null;
+        let shatterImageIndex = 0;
+        let shatterParticles = [];
+        let shatterAnimationId = null;
         let glitchPointerDown = false;
         let lastGlitchX = 0;
         let lastGlitchY = 0;
@@ -954,6 +959,110 @@
             playRandomAudioTrack();
         }
 
+        async function prepareShatter(randomize = false) {
+            shatterImageIndex = randomize ? randomImageIndex(shatterImageIndex) : currentImageIndex;
+            setVisibleBackground(shatterImageIndex);
+            try {
+                shatterImage = await loadImage(IMAGES[(shatterImageIndex + 1) % IMAGES.length]);
+                shatterParticles = [];
+                processingCtx.clearRect(0, 0, processingCanvas.width, processingCanvas.height);
+                createShatterBurst(processingCanvas.width * 0.5, processingCanvas.height * 0.5, 120);
+                startShatterAnimation();
+            } catch (error) {
+                console.error('Shatter image could not be prepared:', error);
+            }
+        }
+
+        function createShatterBurst(x, y, count = 80) {
+            if (!shatterImage) return;
+            const dpr = window.devicePixelRatio || 1;
+            const cover = getCoverRect(processingCanvas, shatterImage);
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const distance = Math.sqrt(Math.random()) * Math.min(processingCanvas.width, processingCanvas.height) * 0.34;
+                const px = x + Math.cos(angle) * distance;
+                const py = y + Math.sin(angle) * distance;
+                const sx = ((px - cover.x) / cover.width) * shatterImage.naturalWidth;
+                const sy = ((py - cover.y) / cover.height) * shatterImage.naturalHeight;
+                const size = (8 + Math.random() * 34) * dpr;
+                const speed = (0.35 + Math.random() * 2.6) * dpr;
+                shatterParticles.push({
+                    x: px,
+                    y: py,
+                    sx: Math.max(0, Math.min(shatterImage.naturalWidth - 4, sx)),
+                    sy: Math.max(0, Math.min(shatterImage.naturalHeight - 4, sy)),
+                    sw: Math.max(4, size / dpr),
+                    sh: Math.max(4, size / dpr),
+                    w: size * (0.7 + Math.random() * 1.9),
+                    h: size * (0.35 + Math.random() * 1.2),
+                    vx: Math.cos(angle) * speed + (Math.random() - 0.5) * 1.2 * dpr,
+                    vy: Math.sin(angle) * speed + (Math.random() - 0.5) * 1.2 * dpr,
+                    spin: (Math.random() - 0.5) * 0.05,
+                    rotation: Math.random() * Math.PI,
+                    life: 0.62 + Math.random() * 0.38
+                });
+            }
+        }
+
+        function startShatterAnimation() {
+            if (shatterAnimationId) cancelAnimationFrame(shatterAnimationId);
+            const tick = () => {
+                if (activeEntry !== '004') {
+                    shatterAnimationId = null;
+                    return;
+                }
+                renderShatter();
+                shatterAnimationId = requestAnimationFrame(tick);
+            };
+            tick();
+        }
+
+        function renderShatter() {
+            if (!shatterImage) return;
+            processingCtx.save();
+            processingCtx.globalCompositeOperation = 'source-over';
+            processingCtx.fillStyle = 'rgba(0, 0, 0, 0.045)';
+            processingCtx.fillRect(0, 0, processingCanvas.width, processingCanvas.height);
+            processingCtx.imageSmoothingEnabled = false;
+
+            shatterParticles.forEach(particle => {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.vx *= 0.992;
+                particle.vy *= 0.992;
+                particle.rotation += particle.spin;
+                particle.life *= 0.996;
+
+                processingCtx.save();
+                processingCtx.globalAlpha = Math.max(0, particle.life);
+                processingCtx.translate(particle.x, particle.y);
+                processingCtx.rotate(particle.rotation);
+                processingCtx.drawImage(
+                    shatterImage,
+                    particle.sx,
+                    particle.sy,
+                    particle.sw,
+                    particle.sh,
+                    -particle.w * 0.5,
+                    -particle.h * 0.5,
+                    particle.w,
+                    particle.h
+                );
+                processingCtx.restore();
+            });
+            shatterParticles = shatterParticles.filter(particle => particle.life > 0.06);
+            processingCtx.restore();
+        }
+
+        function handleShatterPointer(event) {
+            if (activeEntry !== '004') return;
+            const dpr = window.devicePixelRatio || 1;
+            const rect = processingCanvas.getBoundingClientRect();
+            const x = (event.clientX - rect.left) * dpr;
+            const y = (event.clientY - rect.top) * dpr;
+            createShatterBurst(x, y, event.buttons === 1 ? 70 : 34);
+        }
+
         function handleRevealPointerDown(event) {
             revealPointerDownX = event.clientX;
             revealPointerDownY = event.clientY;
@@ -1069,6 +1178,9 @@
             circleAnimationId = null;
             if (processingAnimationId) cancelAnimationFrame(processingAnimationId);
             processingAnimationId = null;
+            if (shatterAnimationId) cancelAnimationFrame(shatterAnimationId);
+            shatterAnimationId = null;
+            shatterParticles = [];
             if (glitchFadeAnimationId) cancelAnimationFrame(glitchFadeAnimationId);
             glitchFadeAnimationId = null;
             glitchPointerDown = false;
@@ -1102,6 +1214,10 @@
                 processingCanvas.classList.add('active');
                 transitionImage();
                 startGlitchFade();
+            } else if (entry === '004') {
+                clearInteractiveLayers();
+                processingCanvas.classList.add('active');
+                prepareShatter(randomize);
             } else {
                 clearInteractiveLayers();
                 transitionImage();
@@ -1197,6 +1313,8 @@
                 prepareRevealStack(true);
             } else if (activeEntry === '003') {
                 prepareCircleMasks(true);
+            } else if (activeEntry === '004') {
+                prepareShatter(true);
             } else {
                 transitionImage();
             }
@@ -1238,6 +1356,8 @@
         processingCanvas.addEventListener('pointerdown', handleGlitchPointerDown);
         processingCanvas.addEventListener('pointerup', handleGlitchPointerUp);
         processingCanvas.addEventListener('pointercancel', handleGlitchPointerUp);
+        processingCanvas.addEventListener('pointermove', handleShatterPointer);
+        processingCanvas.addEventListener('pointerdown', handleShatterPointer);
         window.addEventListener('resize', resizeRevealCanvas);
         resizeRevealCanvas();
         updateAudioReadout();
