@@ -2,8 +2,8 @@
 
 A single-page journal of numbered interactive ambience experiments.
 
-- `001`: Slow photo fade with audio track name, playback time, and pointer-driven datamosh-style pixel smears from the next image.
-- `002`: Pixel reveal with three image layers and a scattered circular brush.
+- `001`: Slow photo fade with audio track name, playback time, pointer-driven datamosh smears, and broken-LCD vertical color lines from the next image.
+- `002`: Rollover pixel reveal with three image layers and a scattered circular brush.
 - `003`: Concentric duplicate-image masks that rotate and offset over the matching base image.
 - `004`: Hidden placeholder for the next sketch.
 - `005`: p5Catalyst.

@@ -698,6 +698,24 @@
             }
 
             processingCtx.save();
+            processingCtx.globalCompositeOperation = 'screen';
+            processingCtx.globalAlpha = smear ? 0.42 : 0.24;
+            const lcdCount = smear ? 8 : 4;
+            for (let i = 0; i < lcdCount; i++) {
+                const lineX = x + (Math.random() - 0.5) * (smear ? 160 : 70) * dpr;
+                const lineHeight = (smear ? 90 + Math.random() * 360 : 36 + Math.random() * 120) * dpr;
+                const lineWidth = (1 + Math.random() * (smear ? 5 : 3)) * dpr;
+                const lineY = y - lineHeight * (0.2 + Math.random() * 0.6);
+                processingCtx.fillStyle = i % 3 === 0
+                    ? 'rgba(255, 42, 82, 0.42)'
+                    : i % 3 === 1
+                        ? 'rgba(37, 214, 255, 0.38)'
+                        : 'rgba(230, 255, 74, 0.34)';
+                processingCtx.fillRect(lineX, lineY, lineWidth, lineHeight);
+            }
+            processingCtx.restore();
+
+            processingCtx.save();
             processingCtx.imageSmoothingEnabled = false;
             processingCtx.globalAlpha = smear ? 0.92 : 0.96;
 
@@ -945,10 +963,13 @@
 
         function handleRevealPointerMove(event) {
             if (activeEntry !== '002') return;
-            if (event.buttons !== 1 && event.pointerType !== 'touch') return;
             const dx = event.clientX - revealPointerDownX;
             const dy = event.clientY - revealPointerDownY;
-            if (Math.hypot(dx, dy) > 4) {
+            if (event.buttons !== 1) {
+                paintPixelReveal(event);
+                return;
+            }
+            if (Math.hypot(dx, dy) > 3) {
                 revealPointerMoved = true;
                 paintPixelReveal(event);
             }
