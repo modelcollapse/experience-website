@@ -2,7 +2,7 @@
 
 A single-page journal of numbered interactive ambience experiments.
 
-- `001`: Slow photo fade with audio track name and playback time.
+- `001`: Slow photo fade with audio track name, playback time, and pointer-driven pixel smear traces from the next image.
 - `002`: Pixel reveal with three image layers and a scattered circular brush.
 - `003`: Concentric duplicate-image masks that rotate and offset over the matching base image.
 - `004`: Hidden placeholder for the next sketch.
