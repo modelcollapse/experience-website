@@ -234,25 +234,24 @@
             visibility: visible;
         }
         #sketch-loader-content {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-            padding: 18px 22px;
-            background: rgba(0, 0, 0, 0.44);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 12px;
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            width: min(220px, 54vw);
+            height: 3px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.14);
+            border-radius: 999px;
         }
-        #sketch-loader-number {
-            font-size: 0.84rem;
-            font-weight: 700;
-            opacity: 0.72;
+        #sketch-loader-content::after {
+            content: "";
+            display: block;
+            width: 42%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.84);
+            border-radius: inherit;
+            animation: loadingBar 1.05s ease-in-out infinite;
         }
-        #sketch-loader-title {
-            font-size: 1rem;
-            font-weight: 650;
+        @keyframes loadingBar {
+            0% { transform: translateX(-105%); }
+            100% { transform: translateX(245%); }
         }
         @media (max-width: 520px) {
             #control-panel {
@@ -338,10 +337,7 @@
         <button id="start-btn">Enter Experience</button>
     </div>
     <div id="sketch-loader" aria-live="polite">
-        <div id="sketch-loader-content">
-            <div id="sketch-loader-number">001</div>
-            <div id="sketch-loader-title">Fade</div>
-        </div>
+        <div id="sketch-loader-content"></div>
     </div>
 
     <!-- Minimal Floating Top-Left UI -->
@@ -461,12 +457,15 @@
         let revealBrushCount = 0;
         let revealMiddleActive = false;
         let circleImage = null;
+        let previousCircleImage = null;
+        let circleFadeStart = 0;
         let circleImageIndex = 0;
         let circlePointerX = 0;
         let circlePointerY = 0;
         let circleTargetX = 0;
         let circleTargetY = 0;
         let circleSpin = 0;
+        let circleSpinTarget = 0;
         let circleAnimationId = null;
         let processingAnimationId = null;
         let processingPointerX = 0.5;
@@ -495,8 +494,6 @@
         const circleMaskCtx = circleMaskCanvas.getContext('2d', { alpha: true });
         const processingCtx = processingCanvas.getContext('2d', { alpha: true });
         const sketchLoader = document.getElementById('sketch-loader');
-        const sketchLoaderNumber = document.getElementById('sketch-loader-number');
-        const sketchLoaderTitle = document.getElementById('sketch-loader-title');
         const journalSelect = document.getElementById('journal-select');
         const trackName = document.getElementById('track-name');
         const trackTime = document.getElementById('track-time');
@@ -675,12 +672,10 @@
             revealUnderCtx.globalAlpha = 1;
             revealUnderCtx.globalCompositeOperation = 'source-over';
             revealBrushCount += 1;
-            if (revealBrushCount > 48) revealMiddleActive = true;
+            if (revealBrushCount > 18) revealMiddleActive = true;
         }
 
-        function showSketchLoader(entry) {
-            sketchLoaderNumber.textContent = entry;
-            sketchLoaderTitle.textContent = SKETCH_LABELS[entry] || 'Placeholder';
+        function showSketchLoader() {
             sketchLoader.classList.add('visible');
             clearTimeout(loaderTimeout);
             loaderTimeout = setTimeout(() => {
@@ -689,15 +684,23 @@
         }
 
         async function prepareCircleMasks(advance = false) {
-            circleImageIndex = advance ? (circleImageIndex + 1) % IMAGES.length : currentImageIndex;
-            setVisibleBackground(circleImageIndex);
+            const baseIndex = advance ? (circleImageIndex + 1) % IMAGES.length : currentImageIndex;
+            circleImageIndex = baseIndex;
+            const overlayIndex = advance && IMAGES.length > 1
+                ? (baseIndex + 1 + Math.floor(Math.random() * (IMAGES.length - 1))) % IMAGES.length
+                : baseIndex;
+            setVisibleBackground(baseIndex);
             try {
-                circleImage = await loadImage(IMAGES[circleImageIndex]);
+                const loadedImage = await loadImage(IMAGES[overlayIndex]);
+                previousCircleImage = circleImage;
+                circleImage = loadedImage;
+                circleFadeStart = performance.now();
                 circlePointerX = 0;
                 circlePointerY = 0;
                 circleTargetX = 0;
                 circleTargetY = 0;
                 circleSpin = 0;
+                circleSpinTarget = 0;
                 startCircleAnimation();
             } catch (error) {
                 console.error('Circle mask image could not be prepared:', error);
@@ -713,15 +716,15 @@
                 }
                 circlePointerX += (circleTargetX - circlePointerX) * 0.08;
                 circlePointerY += (circleTargetY - circlePointerY) * 0.08;
-                circleSpin += 0.004;
+                circleSpin += (circleSpinTarget - circleSpin) * 0.1;
                 renderCircleMasks();
                 circleAnimationId = requestAnimationFrame(tick);
             };
             tick();
         }
 
-        function renderCircleMasks() {
-            if (!circleImage) return;
+        function drawCircleImageBands(image, alpha) {
+            if (!image || alpha <= 0) return;
             const width = circleMaskCanvas.width;
             const height = circleMaskCanvas.height;
             const centerX = width / 2;
@@ -729,15 +732,13 @@
             const maxRadius = Math.hypot(width, height) * 0.58;
             const ringCount = 12;
 
-            circleMaskCtx.clearRect(0, 0, width, height);
-
             for (let i = ringCount; i >= 1; i--) {
                 const radius = (maxRadius / ringCount) * i;
                 const nextRadius = (maxRadius / ringCount) * (i - 0.52);
                 const offsetStrength = (ringCount - i + 1) / ringCount;
                 const offsetX = circlePointerX * offsetStrength * 66;
                 const offsetY = circlePointerY * offsetStrength * 52;
-                const rotation = circleSpin * (i % 2 === 0 ? 1 : -1) * (0.55 + offsetStrength * 1.8);
+                const rotation = circleSpin * (i % 2 === 0 ? 1 : -1) * (0.75 + offsetStrength * 2.2);
                 const imageOffsetX = circlePointerX * offsetStrength * 32;
                 const imageOffsetY = circlePointerY * offsetStrength * 26;
 
@@ -751,11 +752,20 @@
                 }
                 circleMaskCtx.clip('evenodd');
                 circleMaskCtx.translate(-centerX - offsetX + imageOffsetX, -centerY - offsetY + imageOffsetY);
-                circleMaskCtx.globalAlpha = 0.64 + offsetStrength * 0.28;
+                circleMaskCtx.globalAlpha = alpha * (0.64 + offsetStrength * 0.28);
                 circleMaskCtx.filter = `contrast(${1.04 + offsetStrength * 0.24}) saturate(${1.02 + offsetStrength * 0.22}) brightness(${1.02 + offsetStrength * 0.08})`;
-                drawImageCover(circleMaskCtx, circleMaskCanvas, circleImage);
+                drawImageCover(circleMaskCtx, circleMaskCanvas, image);
                 circleMaskCtx.restore();
             }
+        }
+
+        function renderCircleMasks() {
+            if (!circleImage) return;
+            const fadeProgress = Math.min(1, (performance.now() - circleFadeStart) / 1800);
+
+            circleMaskCtx.clearRect(0, 0, circleMaskCanvas.width, circleMaskCanvas.height);
+            drawCircleImageBands(previousCircleImage, 1 - fadeProgress);
+            drawCircleImageBands(circleImage, fadeProgress);
 
             circleMaskCtx.globalAlpha = 1;
             circleMaskCtx.filter = 'none';
@@ -766,6 +776,7 @@
             const rect = circleMaskCanvas.getBoundingClientRect();
             circleTargetX = ((event.clientX - rect.left) / rect.width - 0.5) * 2;
             circleTargetY = ((event.clientY - rect.top) / rect.height - 0.5) * 2;
+            circleSpinTarget = circleTargetX * Math.PI * 0.9 + circleTargetY * Math.PI * 0.45;
         }
 
         function pseudoNoise(x, y, t) {
@@ -863,7 +874,7 @@
             document.body.classList.toggle('entry-003', entry === '003');
             document.body.classList.toggle('entry-004', entry === '004');
             if (journalSelect.value !== entry) journalSelect.value = entry;
-            showSketchLoader(entry);
+            showSketchLoader();
 
             if (entry === '002') {
                 clearInteractiveLayers();
@@ -946,7 +957,7 @@
 
                 newSourceNode.onended = () => {
                     if (currentSourceNode === newSourceNode) {
-                        triggerNextCycle();
+                        handleTrackEnded();
                     }
                 };
 
@@ -962,6 +973,13 @@
             }
         }
 
+        function handleTrackEnded() {
+            if (activeEntry === '001') {
+                transitionImage();
+            }
+            playRandomAudioTrack();
+        }
+
         // Action Trigger Listeners
         document.getElementById('start-btn').addEventListener('click', () => {
             document.getElementById('setup-overlay').style.opacity = '0';
@@ -969,7 +987,7 @@
             
             document.getElementById('control-panel').classList.add('visible');
             document.getElementById('journal-panel').classList.add('visible');
-            showSketchLoader(activeEntry);
+            showSketchLoader();
             
             triggerNextCycle();
             setInterval(() => {
