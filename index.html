@@ -1403,8 +1403,8 @@
             const width = processingCanvas.width;
             const height = processingCanvas.height;
             const dpr = window.devicePixelRatio || 1;
-            const offsetX = (processingPointerX - 0.5) * width * 0.12;
-            const offsetY = (processingPointerY - 0.5) * height * 0.08;
+            const offsetX = (lomoLeakSeed - 0.5) * width * 0.08;
+            const offsetY = (0.5 - lomoLeakSeed) * height * 0.05;
             processingCtx.clearRect(0, 0, width, height);
 
             processingCtx.save();
@@ -1463,17 +1463,8 @@
             processingCtx.restore();
         }
 
-        function updateLomoPointer(event) {
+        function handleLomoPointerDown() {
             if (activeEntry !== '007') return;
-            const rect = processingCanvas.getBoundingClientRect();
-            processingPointerX = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
-            processingPointerY = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
-            renderLomoDoubleExposure();
-        }
-
-        function handleLomoPointerDown(event) {
-            if (activeEntry !== '007') return;
-            updateLomoPointer(event);
             prepareLomoDoubleExposure(true);
         }
 
@@ -1506,8 +1497,8 @@
             const gutter = Math.max(3 * dpr, Math.min(width, height) * 0.008);
             const tileWidth = (width - gutter * 3) / 2;
             const tileHeight = (height - gutter * 3) / 2;
-            const driftX = (processingPointerX - 0.5) * width * 0.04;
-            const driftY = (processingPointerY - 0.5) * height * 0.03;
+            const driftX = (actionSamplerLeakSeed - 0.5) * width * 0.035;
+            const driftY = (0.5 - actionSamplerLeakSeed) * height * 0.025;
             processingCtx.clearRect(0, 0, width, height);
             processingCtx.fillStyle = '#080706';
             processingCtx.fillRect(0, 0, width, height);
@@ -1586,17 +1577,8 @@
             processingCtx.restore();
         }
 
-        function updateActionSamplerPointer(event) {
+        function handleActionSamplerPointerDown() {
             if (activeEntry !== '008') return;
-            const rect = processingCanvas.getBoundingClientRect();
-            processingPointerX = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
-            processingPointerY = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
-            renderActionSampler();
-        }
-
-        function handleActionSamplerPointerDown(event) {
-            if (activeEntry !== '008') return;
-            updateActionSamplerPointer(event);
             prepareActionSampler(true);
         }
 
@@ -1810,9 +1792,7 @@
         processingCanvas.addEventListener('pointermove', updateProcessingPointer);
         processingCanvas.addEventListener('pointerdown', updateProcessingPointer);
         processingCanvas.addEventListener('pointerdown', handleRadialPointerDown);
-        processingCanvas.addEventListener('pointermove', updateLomoPointer);
         processingCanvas.addEventListener('pointerdown', handleLomoPointerDown);
-        processingCanvas.addEventListener('pointermove', updateActionSamplerPointer);
         processingCanvas.addEventListener('pointerdown', handleActionSamplerPointerDown);
         processingCanvas.addEventListener('pointermove', handleGlitchPointerMove);
         processingCanvas.addEventListener('pointerdown', handleGlitchPointerDown);
