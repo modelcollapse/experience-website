@@ -13,6 +13,7 @@
         body, html {
             width: 100%;
             height: 100%;
+            min-height: 100dvh;
             overflow: hidden;
             font-family: system-ui, -apple-system, sans-serif;
             background-color: #000;
@@ -119,7 +120,7 @@
 
         /* Initial Unlock Overlay */
         #setup-overlay {
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
@@ -148,7 +149,7 @@
             background: #e5e5e5;
         }
 
-        /* Minimal Top-Left Interface */
+        /* Minimal Journal Interface */
         #ui-panel {
             position: absolute;
             top: 20px;
@@ -156,13 +157,13 @@
             z-index: 3;
             display: flex;
             align-items: center;
-            gap: 18px;
-            background: rgba(0, 0, 0, 0.26);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            padding: 10px 12px;
-            border-radius: 999px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            gap: 12px;
+            max-width: calc(100vw - 40px);
+            background: rgba(0, 0, 0, 0.58);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            padding: 6px;
+            border-radius: 6px;
             opacity: 0;
             visibility: hidden;
             transition: opacity 0.5s ease, visibility 0.5s ease;
@@ -177,28 +178,45 @@
             align-items: center;
         }
         #journal-dots {
-            gap: 11px;
+            gap: 0;
+            overflow-x: auto;
+            overscroll-behavior-x: contain;
+            scrollbar-width: none;
+        }
+        #journal-dots::-webkit-scrollbar {
+            display: none;
         }
         .journal-dot {
-            width: 13px;
-            height: 13px;
-            border: 1px solid rgba(255, 255, 255, 0.92);
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.28);
+            flex: 0 0 38px;
+            width: 38px;
+            height: 38px;
+            border: 0;
+            border-bottom: 2px solid transparent;
+            border-radius: 0;
+            background: transparent;
+            color: rgba(255, 255, 255, 0.5);
             cursor: pointer;
             padding: 0;
-            transition: background 0.25s ease, transform 0.25s ease, opacity 0.25s ease;
+            font: 600 0.66rem/1 system-ui, -apple-system, sans-serif;
+            font-variant-numeric: tabular-nums;
+            transition: color 0.2s ease, border-color 0.2s ease;
         }
         .journal-dot.active {
-            background: #fff;
-            transform: scale(1.18);
+            color: #fff;
+            border-bottom-color: #fff;
+        }
+        .journal-dot:focus-visible,
+        .text-control:focus-visible,
+        #start-btn:focus-visible {
+            outline: 2px solid #fff;
+            outline-offset: -2px;
         }
         #audio-player {
-            gap: 12px;
-            min-width: min(430px, calc(100vw - 116px));
+            gap: 10px;
+            min-width: min(390px, calc(100vw - 360px));
         }
         #audio-readout {
-            width: min(260px, 36vw);
+            width: min(220px, 28vw);
             color: rgba(255, 255, 255, 0.84);
             font-size: 0.72rem;
             line-height: 1.25;
@@ -237,9 +255,11 @@
             cursor: pointer;
             font-size: 0.68rem;
             font-weight: 700;
-            letter-spacing: 0.04em;
+            letter-spacing: 0;
             text-transform: lowercase;
-            padding: 2px 0;
+            min-width: 44px;
+            min-height: 38px;
+            padding: 0 4px;
         }
         #sketch-loader {
             position: absolute;
@@ -279,26 +299,57 @@
             0% { transform: translateX(-105%); }
             100% { transform: translateX(245%); }
         }
-        @media (max-width: 520px) {
+        @media (max-width: 760px) {
             #ui-panel {
-                left: 12px;
-                top: 12px;
-                right: 12px;
-                gap: 12px;
-                border-radius: 16px;
-                align-items: flex-start;
+                position: fixed;
+                left: 0;
+                top: auto;
+                right: 0;
+                bottom: 0;
+                max-width: none;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0;
+                padding: 4px 8px max(4px, env(safe-area-inset-bottom));
+                border-radius: 0;
+                background: rgba(0, 0, 0, 0.72);
+                border-top: 1px solid rgba(255, 255, 255, 0.16);
+            }
+            #journal-dots {
+                width: 100%;
+            }
+            .journal-dot {
+                flex-basis: 44px;
+                width: 44px;
+                height: 44px;
             }
             #audio-player {
                 min-width: 0;
-                flex: 1;
-                gap: 9px;
+                width: 100%;
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) 52px 52px;
+                gap: 2px;
+                border-top: 1px solid rgba(255, 255, 255, 0.12);
             }
             #audio-readout {
                 width: auto;
                 min-width: 0;
+                align-self: center;
+                padding: 6px 8px 6px 4px;
             }
-            input[type="range"] {
-                width: 52px;
+            #track-time {
+                display: inline;
+                margin-left: 6px;
+            }
+            #track-progress {
+                margin-top: 5px;
+            }
+            .volume-container {
+                display: none;
+            }
+            .text-control {
+                min-width: 52px;
+                min-height: 44px;
             }
         }
 
@@ -358,14 +409,14 @@
     <!-- Minimal Floating Top-Left UI -->
     <div id="ui-panel">
         <div id="journal-dots" aria-label="Experience journal">
-            <button class="journal-dot active" data-entry="001" aria-label="001 Fade"></button>
-            <button class="journal-dot" data-entry="002" aria-label="002 Pixel Reveal"></button>
-            <button class="journal-dot" data-entry="003" aria-label="003 Concentric Masks"></button>
-            <button class="journal-dot" data-entry="004" aria-label="004 Granular Shatter"></button>
-            <button class="journal-dot" data-entry="005" aria-label="005 Additive Remix"></button>
-            <button class="journal-dot" data-entry="006" aria-label="006 Radial Lens"></button>
-            <button class="journal-dot" data-entry="007" aria-label="007 Lomo Double Exposure"></button>
-            <button class="journal-dot" data-entry="008" aria-label="008 ActionSampler Double Exposure"></button>
+            <button class="journal-dot active" data-entry="001" aria-label="001 Fade">001</button>
+            <button class="journal-dot" data-entry="002" aria-label="002 Pixel Reveal">002</button>
+            <button class="journal-dot" data-entry="003" aria-label="003 Concentric Masks">003</button>
+            <button class="journal-dot" data-entry="004" aria-label="004 Granular Shatter">004</button>
+            <button class="journal-dot" data-entry="005" aria-label="005 Additive Remix">005</button>
+            <button class="journal-dot" data-entry="006" aria-label="006 Radial Lens">006</button>
+            <button class="journal-dot" data-entry="007" aria-label="007 Lomo Double Exposure">007</button>
+            <button class="journal-dot" data-entry="008" aria-label="008 ActionSampler Double Exposure">008</button>
         </div>
         <div id="audio-player">
             <div id="audio-readout" aria-live="polite">
@@ -1160,6 +1211,8 @@
             shatterPointerDownY = event.clientY;
             shatterPointerMoved = false;
             processingCanvas.setPointerCapture(event.pointerId);
+            const point = getShatterPoint(event);
+            createShatterBurst(point.x, point.y, 28);
         }
 
         function handleShatterPointerMove(event) {
@@ -1286,6 +1339,7 @@
             remixPointerDownY = event.clientY;
             remixPointerMoved = false;
             processingCanvas.setPointerCapture(event.pointerId);
+            handleRemixPointerMove(event);
         }
 
         function handleRemixPointerMove(event) {
@@ -1318,10 +1372,12 @@
         }
 
         function handleRevealPointerDown(event) {
+            if (activeEntry !== '002') return;
             revealPointerDownX = event.clientX;
             revealPointerDownY = event.clientY;
             revealPointerMoved = false;
             revealCanvas.setPointerCapture(event.pointerId);
+            paintPixelReveal(event);
         }
 
         function handleRevealPointerMove(event) {
