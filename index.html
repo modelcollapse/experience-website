@@ -1395,12 +1395,12 @@
             processingCtx.beginPath();
             processingCtx.arc(cx, cy, radius, 0, Math.PI * 2);
             processingCtx.clip();
-            processingCtx.fillStyle = '#111';
+            processingCtx.fillStyle = '#4a4a4a';
             processingCtx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
 
             processingCtx.globalCompositeOperation = 'source-over';
-            processingCtx.filter = 'grayscale(1) contrast(2.35) brightness(0.9)';
-            processingCtx.globalAlpha = 0.2;
+            processingCtx.filter = 'grayscale(1) contrast(1.9) brightness(1.08)';
+            processingCtx.globalAlpha = 0.16;
             for (let i = 10; i >= 0; i--) {
                 const scale = 1 + i * 0.048;
                 processingCtx.save();
@@ -1411,8 +1411,8 @@
                 processingCtx.restore();
             }
 
-            processingCtx.globalAlpha = 0.94;
-            processingCtx.filter = 'grayscale(1) contrast(3.8) brightness(1.05)';
+            processingCtx.globalAlpha = 0.96;
+            processingCtx.filter = 'grayscale(1) contrast(2.65) brightness(1.22)';
             drawImageCoverScaledFromPoint(processingCtx, processingCanvas, radialLensImage, cx, cy, 0.98);
 
             const ditherCanvas = document.createElement('canvas');
@@ -1423,12 +1423,12 @@
             const cell = ditherSize / 2;
             ditherCtx.fillStyle = '#f4f4f0';
             ditherCtx.fillRect(0, 0, ditherSize, ditherSize);
-            ditherCtx.fillStyle = '#050505';
+            ditherCtx.fillStyle = '#555';
             ditherCtx.fillRect(0, 0, cell, cell);
             ditherCtx.fillRect(cell, cell, cell, cell);
             processingCtx.filter = 'none';
             processingCtx.globalCompositeOperation = 'overlay';
-            processingCtx.globalAlpha = 0.34;
+            processingCtx.globalAlpha = 0.2;
             processingCtx.fillStyle = processingCtx.createPattern(ditherCanvas, 'repeat');
             processingCtx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
             processingCtx.restore();
