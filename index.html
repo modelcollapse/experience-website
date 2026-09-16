@@ -1121,12 +1121,15 @@
 
         function seedAdditiveRemix() {
             if (!remixSources.length) return;
-            const count = Math.floor(36 + Math.random() * 28);
+            processingCtx.fillStyle = 'rgba(0, 0, 0, 0.78)';
+            processingCtx.fillRect(0, 0, processingCanvas.width, processingCanvas.height);
+            const dpr = window.devicePixelRatio || 1;
+            const count = Math.floor((processingCanvas.width * processingCanvas.height) / (5800 * dpr * dpr));
             for (let i = 0; i < count; i++) {
                 drawRemixSample(
                     Math.random() * processingCanvas.width,
                     Math.random() * processingCanvas.height,
-                    0.35 + Math.random() * 0.4
+                    0.55 + Math.random() * 0.75
                 );
             }
         }
@@ -1136,47 +1139,66 @@
             const dpr = window.devicePixelRatio || 1;
             const image = remixSources[Math.floor(Math.random() * remixSources.length)];
             const cover = getCoverRect(processingCanvas, image);
-            const sourceX = ((x - cover.x) / cover.width) * image.naturalWidth + (Math.random() - 0.5) * 180;
-            const sourceY = ((y - cover.y) / cover.height) * image.naturalHeight + (Math.random() - 0.5) * 180;
-            const sourceSize = 46 + Math.random() * 170;
-            const width = (34 + Math.random() * 150) * dpr * strength;
-            const height = width * (0.35 + Math.random() * 1.2);
-            const rotation = (Math.random() - 0.5) * 0.9;
+            const sourceX = ((x - cover.x) / cover.width) * image.naturalWidth + (Math.random() - 0.5) * 320;
+            const sourceY = ((y - cover.y) / cover.height) * image.naturalHeight + (Math.random() - 0.5) * 320;
+            const sourceSize = 34 + Math.random() * 140;
+            const radius = (13 + Math.random() * 39) * dpr * strength;
+            const rotation = (Math.random() - 0.5) * Math.PI;
 
             processingCtx.save();
             processingCtx.translate(x, y);
             processingCtx.rotate(rotation);
+
+            processingCtx.globalCompositeOperation = 'source-over';
+            processingCtx.globalAlpha = 0.45;
+            processingCtx.fillStyle = 'rgba(0, 0, 0, 0.9)';
             processingCtx.beginPath();
-            if (Math.random() > 0.45) {
-                processingCtx.ellipse(0, 0, width * 0.5, height * 0.5, 0, 0, Math.PI * 2);
-            } else {
-                const points = 5 + Math.floor(Math.random() * 4);
-                for (let i = 0; i < points; i++) {
-                    const angle = (i / points) * Math.PI * 2;
-                    const radiusX = width * (0.32 + Math.random() * 0.24);
-                    const radiusY = height * (0.32 + Math.random() * 0.24);
-                    const px = Math.cos(angle) * radiusX;
-                    const py = Math.sin(angle) * radiusY;
-                    if (i === 0) processingCtx.moveTo(px, py);
-                    else processingCtx.lineTo(px, py);
-                }
-                processingCtx.closePath();
-            }
+            processingCtx.arc(radius * 0.13, radius * 0.18, radius * 1.04, 0, Math.PI * 2);
+            processingCtx.fill();
+
+            processingCtx.beginPath();
+            processingCtx.arc(0, 0, radius, 0, Math.PI * 2);
             processingCtx.clip();
-            processingCtx.globalAlpha = 0.28 + Math.random() * 0.52;
-            processingCtx.globalCompositeOperation = Math.random() > 0.5 ? 'screen' : 'source-over';
-            processingCtx.filter = `saturate(${1.1 + Math.random() * 1.8}) contrast(${1 + Math.random() * 0.65})`;
+            processingCtx.globalAlpha = 0.74 + Math.random() * 0.26;
+            processingCtx.globalCompositeOperation = 'source-over';
+            processingCtx.filter = `saturate(${1.25 + Math.random() * 2.4}) contrast(${1.04 + Math.random() * 0.8}) brightness(${0.9 + Math.random() * 0.35})`;
             processingCtx.drawImage(
                 image,
                 Math.max(0, Math.min(image.naturalWidth - sourceSize, sourceX)),
                 Math.max(0, Math.min(image.naturalHeight - sourceSize, sourceY)),
                 sourceSize,
                 sourceSize,
-                -width * 0.5,
-                -height * 0.5,
-                width,
-                height
+                -radius,
+                -radius,
+                radius * 2,
+                radius * 2
             );
+
+            if (Math.random() > 0.42) {
+                processingCtx.globalAlpha = 0.22 + Math.random() * 0.28;
+                processingCtx.globalCompositeOperation = 'screen';
+                const gradient = processingCtx.createRadialGradient(
+                    -radius * 0.45,
+                    -radius * 0.45,
+                    radius * 0.05,
+                    0,
+                    0,
+                    radius
+                );
+                gradient.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+                gradient.addColorStop(0.44, Math.random() > 0.5 ? 'rgba(0, 220, 255, 0.55)' : 'rgba(255, 46, 141, 0.55)');
+                gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                processingCtx.fillStyle = gradient;
+                processingCtx.fillRect(-radius, -radius, radius * 2, radius * 2);
+            }
+
+            processingCtx.globalAlpha = 0.28;
+            processingCtx.globalCompositeOperation = 'source-over';
+            processingCtx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+            processingCtx.lineWidth = Math.max(1, radius * 0.055);
+            processingCtx.beginPath();
+            processingCtx.arc(0, 0, radius - processingCtx.lineWidth * 0.5, 0, Math.PI * 2);
+            processingCtx.stroke();
             processingCtx.restore();
         }
 
@@ -1199,12 +1221,12 @@
             const rect = processingCanvas.getBoundingClientRect();
             const x = (event.clientX - rect.left) * dpr;
             const y = (event.clientY - rect.top) * dpr;
-            const repeats = event.buttons === 1 ? 7 : 3;
+            const repeats = event.buttons === 1 ? 10 : 5;
             for (let i = 0; i < repeats; i++) {
                 drawRemixSample(
-                    x + (Math.random() - 0.5) * 130 * dpr,
-                    y + (Math.random() - 0.5) * 130 * dpr,
-                    event.buttons === 1 ? 1 : 0.72
+                    x + (Math.random() - 0.5) * 170 * dpr,
+                    y + (Math.random() - 0.5) * 170 * dpr,
+                    event.buttons === 1 ? 0.92 : 0.62
                 );
             }
         }
