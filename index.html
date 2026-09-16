@@ -1323,6 +1323,7 @@
             if (!radialBaseImage || !radialLensImage) return;
             const width = processingCanvas.width;
             const height = processingCanvas.height;
+            const dpr = window.devicePixelRatio || 1;
             processingCtx.clearRect(0, 0, width, height);
 
             processingCtx.save();
@@ -1350,21 +1351,38 @@
             processingCtx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
 
             processingCtx.globalCompositeOperation = 'source-over';
-            processingCtx.filter = 'grayscale(1) contrast(1.65) brightness(0.92)';
-            processingCtx.globalAlpha = 0.34;
-            for (let i = 13; i >= 0; i--) {
-                const scale = 1 + i * 0.042;
+            processingCtx.filter = 'grayscale(1) contrast(2.35) brightness(0.9)';
+            processingCtx.globalAlpha = 0.2;
+            for (let i = 10; i >= 0; i--) {
+                const scale = 1 + i * 0.048;
                 processingCtx.save();
                 processingCtx.translate(cx, cy);
-                processingCtx.rotate((i - 7) * 0.008);
+                processingCtx.rotate((i - 5) * 0.007);
                 processingCtx.translate(-cx, -cy);
                 drawImageCoverScaledFromPoint(processingCtx, processingCanvas, radialLensImage, cx, cy, scale);
                 processingCtx.restore();
             }
 
-            processingCtx.globalAlpha = 0.78;
-            processingCtx.filter = 'grayscale(1) contrast(1.95) brightness(0.9) blur(0.7px)';
+            processingCtx.globalAlpha = 0.94;
+            processingCtx.filter = 'grayscale(1) contrast(3.8) brightness(1.05)';
             drawImageCoverScaledFromPoint(processingCtx, processingCanvas, radialLensImage, cx, cy, 0.98);
+
+            const ditherCanvas = document.createElement('canvas');
+            const ditherSize = Math.max(4, Math.round(4 * dpr));
+            ditherCanvas.width = ditherSize;
+            ditherCanvas.height = ditherSize;
+            const ditherCtx = ditherCanvas.getContext('2d');
+            const cell = ditherSize / 2;
+            ditherCtx.fillStyle = '#f4f4f0';
+            ditherCtx.fillRect(0, 0, ditherSize, ditherSize);
+            ditherCtx.fillStyle = '#050505';
+            ditherCtx.fillRect(0, 0, cell, cell);
+            ditherCtx.fillRect(cell, cell, cell, cell);
+            processingCtx.filter = 'none';
+            processingCtx.globalCompositeOperation = 'overlay';
+            processingCtx.globalAlpha = 0.34;
+            processingCtx.fillStyle = processingCtx.createPattern(ditherCanvas, 'repeat');
+            processingCtx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
             processingCtx.restore();
         }
 
