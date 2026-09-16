@@ -362,6 +362,7 @@
             <button class="journal-dot" data-entry="002" aria-label="002 Pixel Reveal"></button>
             <button class="journal-dot" data-entry="003" aria-label="003 Concentric Masks"></button>
             <button class="journal-dot" data-entry="004" aria-label="004 Granular Shatter"></button>
+            <button class="journal-dot" data-entry="005" aria-label="005 Additive Remix"></button>
         </div>
         <div id="audio-player">
             <div id="audio-readout" aria-live="polite">
@@ -438,7 +439,7 @@
             "002": "Pixel Reveal",
             "003": "Concentric Masks",
             "004": "Granular Shatter",
-            "005": "p5Catalyst",
+            "005": "Additive Remix",
             "006": "PerlinNoiseSlider",
             "007": "ScanLines",
             "008": "TrailingCircle",
@@ -495,6 +496,11 @@
         let shatterPointerDownX = 0;
         let shatterPointerDownY = 0;
         let shatterPointerMoved = false;
+        let remixImageIndex = 0;
+        let remixSources = [];
+        let remixPointerDownX = 0;
+        let remixPointerDownY = 0;
+        let remixPointerMoved = false;
         let glitchPointerDown = false;
         let lastGlitchX = 0;
         let lastGlitchY = 0;
@@ -611,6 +617,9 @@
             }
             if (activeEntry === '006') {
                 renderPerlinNoiseSlider();
+            }
+            if (activeEntry === '005') {
+                prepareAdditiveRemix(false);
             }
         }
 
@@ -1095,6 +1104,119 @@
             }
         }
 
+        async function prepareAdditiveRemix(randomize = false) {
+            remixImageIndex = randomize ? randomImageIndex(remixImageIndex) : currentImageIndex;
+            setVisibleBackground(remixImageIndex);
+            processingCtx.clearRect(0, 0, processingCanvas.width, processingCanvas.height);
+            const sourceIndexes = [];
+            while (sourceIndexes.length < Math.min(4, IMAGES.length)) {
+                const index = randomImageIndex(sourceIndexes[sourceIndexes.length - 1] ?? remixImageIndex);
+                if (index !== remixImageIndex && !sourceIndexes.includes(index)) {
+                    sourceIndexes.push(index);
+                }
+            }
+            remixSources = await Promise.all(sourceIndexes.map(index => loadImage(IMAGES[index])));
+            seedAdditiveRemix();
+        }
+
+        function seedAdditiveRemix() {
+            if (!remixSources.length) return;
+            const count = Math.floor(36 + Math.random() * 28);
+            for (let i = 0; i < count; i++) {
+                drawRemixSample(
+                    Math.random() * processingCanvas.width,
+                    Math.random() * processingCanvas.height,
+                    0.35 + Math.random() * 0.4
+                );
+            }
+        }
+
+        function drawRemixSample(x, y, strength = 1) {
+            if (activeEntry !== '005' || !remixSources.length) return;
+            const dpr = window.devicePixelRatio || 1;
+            const image = remixSources[Math.floor(Math.random() * remixSources.length)];
+            const cover = getCoverRect(processingCanvas, image);
+            const sourceX = ((x - cover.x) / cover.width) * image.naturalWidth + (Math.random() - 0.5) * 180;
+            const sourceY = ((y - cover.y) / cover.height) * image.naturalHeight + (Math.random() - 0.5) * 180;
+            const sourceSize = 46 + Math.random() * 170;
+            const width = (34 + Math.random() * 150) * dpr * strength;
+            const height = width * (0.35 + Math.random() * 1.2);
+            const rotation = (Math.random() - 0.5) * 0.9;
+
+            processingCtx.save();
+            processingCtx.translate(x, y);
+            processingCtx.rotate(rotation);
+            processingCtx.beginPath();
+            if (Math.random() > 0.45) {
+                processingCtx.ellipse(0, 0, width * 0.5, height * 0.5, 0, 0, Math.PI * 2);
+            } else {
+                const points = 5 + Math.floor(Math.random() * 4);
+                for (let i = 0; i < points; i++) {
+                    const angle = (i / points) * Math.PI * 2;
+                    const radiusX = width * (0.32 + Math.random() * 0.24);
+                    const radiusY = height * (0.32 + Math.random() * 0.24);
+                    const px = Math.cos(angle) * radiusX;
+                    const py = Math.sin(angle) * radiusY;
+                    if (i === 0) processingCtx.moveTo(px, py);
+                    else processingCtx.lineTo(px, py);
+                }
+                processingCtx.closePath();
+            }
+            processingCtx.clip();
+            processingCtx.globalAlpha = 0.28 + Math.random() * 0.52;
+            processingCtx.globalCompositeOperation = Math.random() > 0.5 ? 'screen' : 'source-over';
+            processingCtx.filter = `saturate(${1.1 + Math.random() * 1.8}) contrast(${1 + Math.random() * 0.65})`;
+            processingCtx.drawImage(
+                image,
+                Math.max(0, Math.min(image.naturalWidth - sourceSize, sourceX)),
+                Math.max(0, Math.min(image.naturalHeight - sourceSize, sourceY)),
+                sourceSize,
+                sourceSize,
+                -width * 0.5,
+                -height * 0.5,
+                width,
+                height
+            );
+            processingCtx.restore();
+        }
+
+        function handleRemixPointerDown(event) {
+            if (activeEntry !== '005') return;
+            remixPointerDownX = event.clientX;
+            remixPointerDownY = event.clientY;
+            remixPointerMoved = false;
+            processingCanvas.setPointerCapture(event.pointerId);
+        }
+
+        function handleRemixPointerMove(event) {
+            if (activeEntry !== '005') return;
+            const dpr = window.devicePixelRatio || 1;
+            const dx = event.clientX - remixPointerDownX;
+            const dy = event.clientY - remixPointerDownY;
+            if (event.buttons === 1 && Math.hypot(dx, dy) > 5) {
+                remixPointerMoved = true;
+            }
+            const rect = processingCanvas.getBoundingClientRect();
+            const x = (event.clientX - rect.left) * dpr;
+            const y = (event.clientY - rect.top) * dpr;
+            const repeats = event.buttons === 1 ? 7 : 3;
+            for (let i = 0; i < repeats; i++) {
+                drawRemixSample(
+                    x + (Math.random() - 0.5) * 130 * dpr,
+                    y + (Math.random() - 0.5) * 130 * dpr,
+                    event.buttons === 1 ? 1 : 0.72
+                );
+            }
+        }
+
+        function handleRemixPointerUp(event) {
+            if (activeEntry !== '005') return;
+            processingCanvas.releasePointerCapture(event.pointerId);
+            if (!remixPointerMoved) {
+                prepareAdditiveRemix(true);
+            }
+        }
+
         function handleRevealPointerDown(event) {
             revealPointerDownX = event.clientX;
             revealPointerDownY = event.clientY;
@@ -1224,6 +1346,7 @@
             document.body.classList.toggle('entry-002', entry === '002');
             document.body.classList.toggle('entry-003', entry === '003');
             document.body.classList.toggle('entry-004', entry === '004');
+            document.body.classList.toggle('entry-005', entry === '005');
             journalDots.forEach(dot => dot.classList.toggle('active', dot.dataset.entry === entry));
             showSketchLoader();
 
@@ -1250,6 +1373,10 @@
                 clearInteractiveLayers();
                 processingCanvas.classList.add('active');
                 prepareShatter(randomize);
+            } else if (entry === '005') {
+                clearInteractiveLayers();
+                processingCanvas.classList.add('active');
+                prepareAdditiveRemix(randomize);
             } else {
                 clearInteractiveLayers();
                 transitionImage();
@@ -1347,6 +1474,8 @@
                 prepareCircleMasks(true);
             } else if (activeEntry === '004') {
                 prepareShatter(true);
+            } else if (activeEntry === '005') {
+                prepareAdditiveRemix(true);
             } else {
                 transitionImage();
             }
@@ -1392,6 +1521,10 @@
         processingCanvas.addEventListener('pointermove', handleShatterPointerMove);
         processingCanvas.addEventListener('pointerup', handleShatterPointerUp);
         processingCanvas.addEventListener('pointercancel', handleShatterPointerUp);
+        processingCanvas.addEventListener('pointerdown', handleRemixPointerDown);
+        processingCanvas.addEventListener('pointermove', handleRemixPointerMove);
+        processingCanvas.addEventListener('pointerup', handleRemixPointerUp);
+        processingCanvas.addEventListener('pointercancel', handleRemixPointerUp);
         window.addEventListener('resize', resizeRevealCanvas);
         resizeRevealCanvas();
         updateAudioReadout();
