@@ -42,6 +42,9 @@
             filter: none;
             transform: scale(1);
         }
+        body.entry-001 .bg-slide.active {
+            animation: fadeBreath 18s ease-in-out infinite alternate;
+        }
         .bg-slide.drift-a.active {
             background-position: center;
             transform: scale(1);
@@ -56,6 +59,16 @@
         }
         #atmosphere-overlay {
             display: none;
+        }
+        @keyframes fadeBreath {
+            0% {
+                transform: scale(1);
+                filter: brightness(0.96) contrast(1.04);
+            }
+            100% {
+                transform: scale(1.045);
+                filter: brightness(1.08) contrast(1.12);
+            }
         }
         #processing-canvas,
         #circle-mask-canvas,
@@ -635,8 +648,6 @@
             revealUnderCtx.globalCompositeOperation = 'source-over';
             revealUnderCtx.clearRect(0, 0, revealUnderCanvas.width, revealUnderCanvas.height);
             revealUnderCtx.globalAlpha = 1;
-            drawImageCover(revealUnderCtx, revealUnderCanvas, revealImageStack[0]);
-            revealUnderCtx.globalAlpha = 0.78;
             drawImageCover(revealUnderCtx, revealUnderCanvas, revealImageStack[1]);
             revealUnderCtx.globalAlpha = 1;
 
@@ -704,9 +715,7 @@
         async function prepareCircleMasks(randomize = false) {
             const baseIndex = randomize ? randomImageIndex(circleImageIndex) : currentImageIndex;
             circleImageIndex = baseIndex;
-            const overlayIndex = randomize && IMAGES.length > 1
-                ? (baseIndex + 1 + Math.floor(Math.random() * (IMAGES.length - 1))) % IMAGES.length
-                : baseIndex;
+            const overlayIndex = randomize ? randomImageIndex(baseIndex) : baseIndex;
             setVisibleBackground(baseIndex);
             try {
                 const loadedImage = await loadImage(IMAGES[overlayIndex]);
