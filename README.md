@@ -7,7 +7,7 @@ A single-page journal of numbered interactive ambience experiments.
 - `003`: Concentric duplicate-image masks that rotate and offset over the matching base image.
 - `004`: Granular shatter: click refreshes the composition; rollover and drag add sampled image shards that burst, drift, and fade.
 - `005`: Additive remix: click refreshes a dense field of circular photo samples; rollover and drag add more sampled circles.
-- `006`: PerlinNoiseSlider first pass: an in-browser generative noise field with pointer-controlled spacing, speed, and glow.
+- `006`: Radial lens: a colorful blurred photo field with a black-and-white circular zoom study from another photo.
 - `007`: ScanLines.
 - `008`: TrailingCircle.
 - `009`: CirclePatternSketch.

@@ -363,6 +363,7 @@
             <button class="journal-dot" data-entry="003" aria-label="003 Concentric Masks"></button>
             <button class="journal-dot" data-entry="004" aria-label="004 Granular Shatter"></button>
             <button class="journal-dot" data-entry="005" aria-label="005 Additive Remix"></button>
+            <button class="journal-dot" data-entry="006" aria-label="006 Radial Lens"></button>
         </div>
         <div id="audio-player">
             <div id="audio-readout" aria-live="polite">
@@ -440,7 +441,7 @@
             "003": "Concentric Masks",
             "004": "Granular Shatter",
             "005": "Additive Remix",
-            "006": "PerlinNoiseSlider",
+            "006": "Radial Lens",
             "007": "ScanLines",
             "008": "TrailingCircle",
             "009": "CirclePatternSketch",
@@ -501,6 +502,10 @@
         let remixPointerDownX = 0;
         let remixPointerDownY = 0;
         let remixPointerMoved = false;
+        let radialBaseImage = null;
+        let radialLensImage = null;
+        let radialBaseIndex = 0;
+        let radialLensIndex = 1;
         let glitchPointerDown = false;
         let lastGlitchX = 0;
         let lastGlitchY = 0;
@@ -570,6 +575,15 @@
             ctx.drawImage(img, x, y, width, height);
         }
 
+        function drawImageCoverScaledFromPoint(ctx, canvas, img, cx, cy, scale) {
+            const cover = getCoverRect(canvas, img);
+            const width = cover.width * scale;
+            const height = cover.height * scale;
+            const x = cx + (cover.x - cx) * scale;
+            const y = cy + (cover.y - cy) * scale;
+            ctx.drawImage(img, x, y, width, height);
+        }
+
         function getCoverRect(canvas, img) {
             const canvasRatio = canvas.width / canvas.height;
             const imageRatio = img.naturalWidth / img.naturalHeight;
@@ -616,7 +630,7 @@
                 renderCircleMasks();
             }
             if (activeEntry === '006') {
-                renderPerlinNoiseSlider();
+                renderRadialLens();
             }
             if (activeEntry === '005') {
                 prepareAdditiveRemix(false);
@@ -1268,15 +1282,22 @@
             }
         }
 
-        function pseudoNoise(x, y, t) {
-            return (
-                Math.sin(x * 0.018 + t) +
-                Math.sin(y * 0.022 - t * 0.72) +
-                Math.sin((x + y) * 0.012 + t * 0.41)
-            ) / 3;
+        async function prepareRadialLens(randomize = false) {
+            radialBaseIndex = randomize ? randomImageIndex(radialBaseIndex) : currentImageIndex;
+            radialLensIndex = randomImageIndex(radialBaseIndex);
+            setVisibleBackground(radialBaseIndex);
+            try {
+                [radialBaseImage, radialLensImage] = await Promise.all([
+                    loadImage(IMAGES[radialBaseIndex]),
+                    loadImage(IMAGES[radialLensIndex])
+                ]);
+                startRadialLens();
+            } catch (error) {
+                console.error('Radial lens images could not be prepared:', error);
+            }
         }
 
-        function startPerlinNoiseSlider() {
+        function startRadialLens() {
             if (processingAnimationId) cancelAnimationFrame(processingAnimationId);
             processingTime = 0;
             const tick = () => {
@@ -1284,53 +1305,90 @@
                     processingAnimationId = null;
                     return;
                 }
-                processingTime += 0.012 + processingPointerY * 0.026;
-                renderPerlinNoiseSlider();
+                processingTime += 0.012;
+                renderRadialLens();
                 processingAnimationId = requestAnimationFrame(tick);
             };
             tick();
         }
 
-        function renderPerlinNoiseSlider() {
+        function renderRadialLens() {
+            if (!radialBaseImage || !radialLensImage) return;
             const width = processingCanvas.width;
             const height = processingCanvas.height;
             const dpr = window.devicePixelRatio || 1;
-            const spacing = (22 + processingPointerX * 46) * dpr;
-            const strokeScale = 0.65 + processingPointerY * 1.8;
-
             processingCtx.clearRect(0, 0, width, height);
-            processingCtx.fillStyle = 'rgba(0, 0, 0, 0.28)';
-            processingCtx.fillRect(0, 0, width, height);
-            processingCtx.lineCap = 'round';
 
-            for (let y = -spacing; y < height + spacing; y += spacing) {
+            processingCtx.save();
+            processingCtx.filter = 'blur(22px) saturate(2.4) contrast(1.18) brightness(1.02)';
+            drawImageCover(processingCtx, processingCanvas, radialBaseImage);
+            processingCtx.restore();
+
+            const gradient = processingCtx.createLinearGradient(0, 0, width, height);
+            gradient.addColorStop(0, 'rgba(255, 38, 121, 0.26)');
+            gradient.addColorStop(0.32, 'rgba(30, 218, 255, 0.24)');
+            gradient.addColorStop(0.65, 'rgba(120, 255, 72, 0.22)');
+            gradient.addColorStop(1, 'rgba(255, 145, 0, 0.24)');
+            processingCtx.fillStyle = gradient;
+            processingCtx.fillRect(0, 0, width, height);
+
+            const cx = width * (0.5 + (processingPointerX - 0.5) * 0.18);
+            const cy = height * (0.5 + (processingPointerY - 0.5) * 0.18);
+            const radius = Math.min(width, height) * 0.34;
+            const pulse = Math.sin(processingTime * 1.7) * 0.018;
+
+            processingCtx.save();
+            processingCtx.beginPath();
+            processingCtx.arc(cx, cy, radius, 0, Math.PI * 2);
+            processingCtx.clip();
+            processingCtx.fillStyle = '#111';
+            processingCtx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
+
+            processingCtx.globalCompositeOperation = 'source-over';
+            processingCtx.filter = 'grayscale(1) contrast(1.65) brightness(0.92)';
+            processingCtx.globalAlpha = 0.34;
+            for (let i = 13; i >= 0; i--) {
+                const scale = 1 + i * 0.042 + pulse;
+                processingCtx.save();
+                processingCtx.translate(cx, cy);
+                processingCtx.rotate((i - 7) * 0.008 + Math.sin(processingTime) * 0.012);
+                processingCtx.translate(-cx, -cy);
+                drawImageCoverScaledFromPoint(processingCtx, processingCanvas, radialLensImage, cx, cy, scale);
+                processingCtx.restore();
+            }
+
+            processingCtx.globalAlpha = 0.78;
+            processingCtx.filter = 'grayscale(1) contrast(1.95) brightness(0.9) blur(0.7px)';
+            processingCtx.save();
+            processingCtx.translate(cx, cy);
+            processingCtx.rotate(Math.sin(processingTime * 0.7) * 0.008);
+            processingCtx.translate(-cx, -cy);
+            drawImageCoverScaledFromPoint(processingCtx, processingCanvas, radialLensImage, cx, cy, 0.98 + pulse);
+            processingCtx.restore();
+
+            processingCtx.filter = 'none';
+            processingCtx.globalCompositeOperation = 'screen';
+            processingCtx.globalAlpha = 0.42;
+            for (let i = 0; i < 62; i++) {
+                const angle = (i / 62) * Math.PI * 2 + processingTime * 0.08;
+                const inner = radius * (0.1 + Math.random() * 0.16);
+                const outer = radius * (0.55 + Math.random() * 0.42);
+                processingCtx.strokeStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.34)' : 'rgba(190,190,190,0.22)';
+                processingCtx.lineWidth = (1 + Math.random() * 3.2) * dpr;
                 processingCtx.beginPath();
-                for (let x = -spacing; x < width + spacing; x += spacing * 0.42) {
-                    const n = pseudoNoise(x, y, processingTime);
-                    const wave = n * spacing * (1.4 + processingPointerY * 2.4);
-                    const px = x;
-                    const py = y + wave;
-                    if (x === -spacing) {
-                        processingCtx.moveTo(px, py);
-                    } else {
-                        processingCtx.lineTo(px, py);
-                    }
-                }
-                const hue = 205 + Math.sin(y * 0.006 + processingTime) * 54;
-                processingCtx.strokeStyle = `hsla(${hue}, 88%, ${58 + processingPointerY * 22}%, 0.34)`;
-                processingCtx.lineWidth = Math.max(1, strokeScale * dpr);
+                processingCtx.moveTo(cx + Math.cos(angle) * inner, cy + Math.sin(angle) * inner);
+                processingCtx.lineTo(cx + Math.cos(angle) * outer, cy + Math.sin(angle) * outer);
                 processingCtx.stroke();
             }
+            processingCtx.restore();
 
-            for (let i = 0; i < 90; i++) {
-                const x = (Math.sin(i * 91.7 + processingTime * 0.7) * 0.5 + 0.5) * width;
-                const y = (Math.sin(i * 41.3 - processingTime * 0.52) * 0.5 + 0.5) * height;
-                const r = (1.5 + pseudoNoise(x, y, processingTime) * 3 + processingPointerX * 5) * dpr;
-                processingCtx.fillStyle = `rgba(255, 245, 160, ${0.08 + processingPointerY * 0.14})`;
-                processingCtx.beginPath();
-                processingCtx.arc(x, y, Math.max(0.8, r), 0, Math.PI * 2);
-                processingCtx.fill();
-            }
+            processingCtx.save();
+            processingCtx.strokeStyle = 'rgba(0, 0, 0, 0.72)';
+            processingCtx.lineWidth = 2 * dpr;
+            processingCtx.beginPath();
+            processingCtx.arc(cx, cy, radius, 0, Math.PI * 2);
+            processingCtx.stroke();
+            processingCtx.restore();
         }
 
         function updateProcessingPointer(event) {
@@ -1338,6 +1396,12 @@
             const rect = processingCanvas.getBoundingClientRect();
             processingPointerX = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
             processingPointerY = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
+        }
+
+        function handleRadialPointerDown(event) {
+            if (activeEntry !== '006') return;
+            updateProcessingPointer(event);
+            prepareRadialLens(true);
         }
 
         function clearInteractiveLayers() {
@@ -1385,7 +1449,7 @@
             } else if (entry === '006') {
                 clearInteractiveLayers();
                 processingCanvas.classList.add('active');
-                startPerlinNoiseSlider();
+                prepareRadialLens(randomize);
             } else if (entry === '001') {
                 clearInteractiveLayers();
                 processingCanvas.classList.add('active');
@@ -1498,6 +1562,8 @@
                 prepareShatter(true);
             } else if (activeEntry === '005') {
                 prepareAdditiveRemix(true);
+            } else if (activeEntry === '006') {
+                prepareRadialLens(true);
             } else {
                 transitionImage();
             }
@@ -1535,6 +1601,7 @@
         circleMaskCanvas.addEventListener('pointerdown', handleCirclePointerDown);
         processingCanvas.addEventListener('pointermove', updateProcessingPointer);
         processingCanvas.addEventListener('pointerdown', updateProcessingPointer);
+        processingCanvas.addEventListener('pointerdown', handleRadialPointerDown);
         processingCanvas.addEventListener('pointermove', handleGlitchPointerMove);
         processingCanvas.addEventListener('pointerdown', handleGlitchPointerDown);
         processingCanvas.addEventListener('pointerup', handleGlitchPointerUp);
