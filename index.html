@@ -1497,8 +1497,8 @@
             const gutter = Math.max(3 * dpr, Math.min(width, height) * 0.008);
             const tileWidth = (width - gutter * 3) / 2;
             const tileHeight = (height - gutter * 3) / 2;
-            const driftX = (actionSamplerLeakSeed - 0.5) * width * 0.035;
-            const driftY = (0.5 - actionSamplerLeakSeed) * height * 0.025;
+            const driftX = ((actionSamplerLeakSeed - 0.5) * 0.035 + (processingPointerX - 0.5) * 0.075) * width;
+            const driftY = ((0.5 - actionSamplerLeakSeed) * 0.025 + (processingPointerY - 0.5) * 0.055) * height;
             processingCtx.clearRect(0, 0, width, height);
             processingCtx.fillStyle = '#080706';
             processingCtx.fillRect(0, 0, width, height);
@@ -1568,13 +1568,26 @@
             processingCtx.fillStyle = vignette;
             processingCtx.fillRect(0, 0, width, height);
             processingCtx.globalCompositeOperation = 'soft-light';
+            let grainState = Math.max(1, Math.floor(actionSamplerLeakSeed * 2147483646));
+            const grainRandom = () => {
+                grainState = grainState * 16807 % 2147483647;
+                return (grainState - 1) / 2147483646;
+            };
             for (let i = 0; i < 300; i++) {
-                const value = Math.random() > 0.5 ? 255 : 0;
-                processingCtx.fillStyle = `rgba(${value},${value},${value},${0.03 + Math.random() * 0.07})`;
-                const size = (0.7 + Math.random() * 1.5) * dpr;
-                processingCtx.fillRect(Math.random() * width, Math.random() * height, size, size);
+                const value = grainRandom() > 0.5 ? 255 : 0;
+                processingCtx.fillStyle = `rgba(${value},${value},${value},${0.03 + grainRandom() * 0.07})`;
+                const size = (0.7 + grainRandom() * 1.5) * dpr;
+                processingCtx.fillRect(grainRandom() * width, grainRandom() * height, size, size);
             }
             processingCtx.restore();
+        }
+
+        function updateActionSamplerPointer(event) {
+            if (activeEntry !== '008') return;
+            const rect = processingCanvas.getBoundingClientRect();
+            processingPointerX = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+            processingPointerY = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
+            renderActionSampler();
         }
 
         function handleActionSamplerPointerDown() {
@@ -1793,6 +1806,7 @@
         processingCanvas.addEventListener('pointerdown', updateProcessingPointer);
         processingCanvas.addEventListener('pointerdown', handleRadialPointerDown);
         processingCanvas.addEventListener('pointerdown', handleLomoPointerDown);
+        processingCanvas.addEventListener('pointermove', updateActionSamplerPointer);
         processingCanvas.addEventListener('pointerdown', handleActionSamplerPointerDown);
         processingCanvas.addEventListener('pointermove', handleGlitchPointerMove);
         processingCanvas.addEventListener('pointerdown', handleGlitchPointerDown);
