@@ -135,53 +135,57 @@
             background: #e5e5e5;
         }
 
-        /* Minimal Top-Left Control Panel */
-        #control-panel {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            z-index: 3;
-            display: grid;
-            grid-template-columns: auto auto auto;
-            align-items: center;
-            gap: 8px 14px;
-            background: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            padding: 12px 16px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.5s ease, visibility 0.5s ease;
-        }
-        #control-panel.visible {
-            opacity: 1;
-            visibility: visible;
-        }
-        #journal-panel {
+        /* Minimal Top-Left Interface */
+        #ui-panel {
             position: absolute;
             top: 20px;
             left: 20px;
             z-index: 3;
-            background: rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            background: rgba(0, 0, 0, 0.26);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            padding: 8px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            padding: 10px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
             opacity: 0;
             visibility: hidden;
             transition: opacity 0.5s ease, visibility 0.5s ease;
         }
-        #journal-panel.visible {
+        #ui-panel.visible {
             opacity: 1;
             visibility: visible;
         }
+        #journal-dots,
+        #audio-player {
+            display: flex;
+            align-items: center;
+        }
+        #journal-dots {
+            gap: 11px;
+        }
+        .journal-dot {
+            width: 13px;
+            height: 13px;
+            border: 1px solid rgba(255, 255, 255, 0.92);
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.28);
+            cursor: pointer;
+            padding: 0;
+            transition: background 0.25s ease, transform 0.25s ease, opacity 0.25s ease;
+        }
+        .journal-dot.active {
+            background: #fff;
+            transform: scale(1.18);
+        }
+        #audio-player {
+            gap: 12px;
+            min-width: min(430px, calc(100vw - 116px));
+        }
         #audio-readout {
-            grid-column: 1 / -1;
-            min-width: 220px;
-            max-width: min(360px, calc(100vw - 64px));
+            width: min(260px, 36vw);
             color: rgba(255, 255, 255, 0.84);
             font-size: 0.72rem;
             line-height: 1.25;
@@ -199,21 +203,30 @@
             color: rgba(255, 255, 255, 0.58);
             font-variant-numeric: tabular-nums;
         }
-        #journal-select {
-            min-width: min(330px, calc(100vw - 64px));
-            height: 34px;
-            padding: 0 36px 0 12px;
-            border: 1px solid rgba(255, 255, 255, 0.16);
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.08);
-            color: #fff;
-            cursor: pointer;
-            font-size: 0.82rem;
-            font-weight: 650;
-            letter-spacing: 0;
+        #track-progress {
+            width: 100%;
+            height: 2px;
+            margin-top: 6px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.18);
+            border-radius: 999px;
         }
-        #journal-select option {
-            color: #000;
+        #track-progress-bar {
+            width: 0%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.78);
+            border-radius: inherit;
+        }
+        .text-control {
+            border: 0;
+            background: transparent;
+            color: rgba(255, 255, 255, 0.78);
+            cursor: pointer;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: lowercase;
+            padding: 2px 0;
         }
         #sketch-loader {
             position: absolute;
@@ -254,40 +267,29 @@
             100% { transform: translateX(245%); }
         }
         @media (max-width: 520px) {
-            #control-panel {
+            #ui-panel {
                 left: 12px;
-                bottom: 12px;
-                gap: 10px;
-                padding: 9px 12px;
-            }
-            #journal-panel {
                 top: 12px;
-                left: 12px;
+                right: 12px;
+                gap: 12px;
+                border-radius: 16px;
+                align-items: flex-start;
+            }
+            #audio-player {
+                min-width: 0;
+                flex: 1;
+                gap: 9px;
+            }
+            #audio-readout {
+                width: auto;
+                min-width: 0;
             }
             input[type="range"] {
-                width: 64px;
+                width: 52px;
             }
         }
 
         /* Control Panel Elements */
-        .ctrl-btn {
-            background: none;
-            border: none;
-            color: #fff;
-            font-size: 1.1rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0.8;
-            transition: opacity 0.2s;
-            width: 28px;
-            height: 28px;
-        }
-        .ctrl-btn:hover {
-            opacity: 1;
-        }
-        
         /* Volume Container & Slider Styling */
         .volume-container {
             display: flex;
@@ -341,23 +343,26 @@
     </div>
 
     <!-- Minimal Floating Top-Left UI -->
-    <div id="control-panel">
-        <button id="mute-btn" class="ctrl-btn" title="Mute/Unmute">🔊</button>
-        <div class="volume-container">
-            <input id="volume-slider" type="range" min="0" max="1" step="0.01" value="1">
+    <div id="ui-panel">
+        <div id="journal-dots" aria-label="Experience journal">
+            <button class="journal-dot active" data-entry="001" aria-label="001 Fade"></button>
+            <button class="journal-dot" data-entry="002" aria-label="002 Pixel Reveal"></button>
+            <button class="journal-dot" data-entry="003" aria-label="003 Concentric Masks"></button>
         </div>
-        <button id="next-btn" class="ctrl-btn" title="Next Mix">⏭️</button>
-        <div id="audio-readout" aria-live="polite">
-            <span id="track-name">No audio playing</span>
-            <span id="track-time">00:00 / 00:00</span>
+        <div id="audio-player">
+            <div id="audio-readout" aria-live="polite">
+                <span id="track-name">No audio playing</span>
+                <span id="track-time">00:00 / 00:00</span>
+                <div id="track-progress" aria-hidden="true">
+                    <div id="track-progress-bar"></div>
+                </div>
+            </div>
+            <div class="volume-container">
+                <input id="volume-slider" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volume">
+            </div>
+            <button id="mute-btn" class="text-control" title="Mute/Unmute">sound</button>
+            <button id="next-btn" class="text-control" title="Reset visual and sound">reset</button>
         </div>
-    </div>
-    <div id="journal-panel" aria-label="Experience journal">
-        <select id="journal-select" aria-label="Select experience">
-            <option value="001">001 Fade</option>
-            <option value="002">002 Pixel Reveal</option>
-            <option value="003">003 Concentric Masks</option>
-        </select>
     </div>
 
     <script>
@@ -494,9 +499,10 @@
         const circleMaskCtx = circleMaskCanvas.getContext('2d', { alpha: true });
         const processingCtx = processingCanvas.getContext('2d', { alpha: true });
         const sketchLoader = document.getElementById('sketch-loader');
-        const journalSelect = document.getElementById('journal-select');
+        const journalDots = Array.from(document.querySelectorAll('.journal-dot'));
         const trackName = document.getElementById('track-name');
         const trackTime = document.getElementById('track-time');
+        const trackProgressBar = document.getElementById('track-progress-bar');
 
         function loadImage(src) {
             return new Promise((resolve, reject) => {
@@ -575,6 +581,15 @@
             setVisibleBackground(randomIndex);
         }
 
+        function randomImageIndex(exceptIndex = -1) {
+            if (IMAGES.length <= 1) return 0;
+            let index = Math.floor(Math.random() * IMAGES.length);
+            while (index === exceptIndex) {
+                index = Math.floor(Math.random() * IMAGES.length);
+            }
+            return index;
+        }
+
         function formatTime(seconds) {
             if (!Number.isFinite(seconds) || seconds < 0) return '00:00';
             const minutes = Math.floor(seconds / 60);
@@ -589,12 +604,13 @@
             }
             trackName.textContent = currentTrackLabel;
             trackTime.textContent = `${formatTime(elapsed)} / ${formatTime(currentTrackDuration)}`;
+            trackProgressBar.style.width = currentTrackDuration > 0 ? `${(elapsed / currentTrackDuration) * 100}%` : '0%';
             requestAnimationFrame(updateAudioReadout);
         }
 
-        async function prepareRevealStack(advance = false) {
-            if (advance) {
-                revealCycleIndex = (revealCycleIndex + 1) % IMAGES.length;
+        async function prepareRevealStack(randomize = false) {
+            if (randomize) {
+                revealCycleIndex = randomImageIndex(revealCycleIndex);
             } else {
                 revealCycleIndex = currentImageIndex;
             }
@@ -683,10 +699,10 @@
             }, 1150);
         }
 
-        async function prepareCircleMasks(advance = false) {
-            const baseIndex = advance ? (circleImageIndex + 1) % IMAGES.length : currentImageIndex;
+        async function prepareCircleMasks(randomize = false) {
+            const baseIndex = randomize ? randomImageIndex(circleImageIndex) : currentImageIndex;
             circleImageIndex = baseIndex;
-            const overlayIndex = advance && IMAGES.length > 1
+            const overlayIndex = randomize && IMAGES.length > 1
                 ? (baseIndex + 1 + Math.floor(Math.random() * (IMAGES.length - 1))) % IMAGES.length
                 : baseIndex;
             setVisibleBackground(baseIndex);
@@ -873,7 +889,7 @@
             document.body.classList.toggle('entry-002', entry === '002');
             document.body.classList.toggle('entry-003', entry === '003');
             document.body.classList.toggle('entry-004', entry === '004');
-            if (journalSelect.value !== entry) journalSelect.value = entry;
+            journalDots.forEach(dot => dot.classList.toggle('active', dot.dataset.entry === entry));
             showSketchLoader();
 
             if (entry === '002') {
@@ -980,13 +996,23 @@
             playRandomAudioTrack();
         }
 
+        function resetCurrentExperience() {
+            if (activeEntry === '002') {
+                prepareRevealStack(true);
+            } else if (activeEntry === '003') {
+                prepareCircleMasks(true);
+            } else {
+                transitionImage();
+            }
+            playRandomAudioTrack();
+        }
+
         // Action Trigger Listeners
         document.getElementById('start-btn').addEventListener('click', () => {
             document.getElementById('setup-overlay').style.opacity = '0';
             setTimeout(() => document.getElementById('setup-overlay').style.display = 'none', 500);
             
-            document.getElementById('control-panel').classList.add('visible');
-            document.getElementById('journal-panel').classList.add('visible');
+            document.getElementById('ui-panel').classList.add('visible');
             showSketchLoader();
             
             triggerNextCycle();
@@ -995,17 +1021,14 @@
             }, 12000); // Entry 001 transitions a new photo mix every 12 seconds independently
         });
 
-        document.getElementById('next-btn').addEventListener('click', () => {
-            if (activeEntry === '002') {
-                prepareRevealStack(true);
-            } else if (activeEntry === '003') {
-                prepareCircleMasks(true);
-            } else {
-                triggerNextCycle();
-            }
-        });
+        document.getElementById('next-btn').addEventListener('click', resetCurrentExperience);
 
-        journalSelect.addEventListener('change', (event) => switchEntry(event.target.value));
+        journalDots.forEach(dot => {
+            dot.addEventListener('click', () => {
+                switchEntry(dot.dataset.entry);
+                playRandomAudioTrack();
+            });
+        });
 
         revealCanvas.addEventListener('pointerdown', (event) => {
             revealCanvas.setPointerCapture(event.pointerId);
@@ -1030,10 +1053,10 @@
             
             if (val === 0) {
                 isMuted = true;
-                muteBtn.textContent = '❌';
+                muteBtn.textContent = 'muted';
             } else {
                 isMuted = false;
-                muteBtn.textContent = '🔊';
+                muteBtn.textContent = 'sound';
             }
         });
 
@@ -1044,12 +1067,12 @@
                 preMuteVolume = parseFloat(volumeSlider.value);
                 masterGainNode.gain.setValueAtTime(0, audioCtx.currentTime);
                 volumeSlider.value = 0;
-                muteBtn.textContent = '❌';
+                muteBtn.textContent = 'muted';
                 isMuted = true;
             } else {
                 masterGainNode.gain.setValueAtTime(preMuteVolume, audioCtx.currentTime);
                 volumeSlider.value = preMuteVolume;
-                muteBtn.textContent = '🔊';
+                muteBtn.textContent = 'sound';
                 isMuted = false;
             }
         });

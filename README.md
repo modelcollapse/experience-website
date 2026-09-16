@@ -22,7 +22,7 @@ A single-page journal of numbered interactive ambience experiments.
 - `018`: midi-experiments.
 - `019`: digital-nature.
 
-Audio is shared across the journal. `001` can cycle the audio bed with the image fade, while `002` and `003` keep the current sound bed running as their visuals change.
+Audio is shared across the journal. The minimal player shows track name, time, progress, volume, mute, and reset; reset and sketch navigation both choose a new random sound bed.
 
 ## Run locally
 
