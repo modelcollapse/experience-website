@@ -471,6 +471,8 @@
         let circleTargetY = 0;
         let circleSpin = 0;
         let circleSpinTarget = 0;
+        let circleBlur = 0;
+        let circleBlurTarget = 0;
         let circleAnimationId = null;
         let processingAnimationId = null;
         let processingPointerX = 0.5;
@@ -577,7 +579,7 @@
         function transitionImage() {
             const slides = document.querySelectorAll('.bg-slide');
             if (slides.length === 0) return;
-            const randomIndex = Math.floor(Math.random() * slides.length);
+            const randomIndex = randomImageIndex(currentImageIndex);
             setVisibleBackground(randomIndex);
         }
 
@@ -717,6 +719,8 @@
                 circleTargetY = 0;
                 circleSpin = 0;
                 circleSpinTarget = 0;
+                circleBlur = 0;
+                circleBlurTarget = 0;
                 startCircleAnimation();
             } catch (error) {
                 console.error('Circle mask image could not be prepared:', error);
@@ -733,6 +737,7 @@
                 circlePointerX += (circleTargetX - circlePointerX) * 0.08;
                 circlePointerY += (circleTargetY - circlePointerY) * 0.08;
                 circleSpin += (circleSpinTarget - circleSpin) * 0.1;
+                circleBlur += (circleBlurTarget - circleBlur) * 0.1;
                 renderCircleMasks();
                 circleAnimationId = requestAnimationFrame(tick);
             };
@@ -753,14 +758,16 @@
                 const nextRadius = (maxRadius / ringCount) * (i - 0.52);
                 const offsetStrength = (ringCount - i + 1) / ringCount;
                 const offsetX = circlePointerX * offsetStrength * 66;
-                const offsetY = circlePointerY * offsetStrength * 52;
+                const offsetY = 0;
+                const scale = 1 + circlePointerY * offsetStrength * 0.08;
                 const rotation = circleSpin * (i % 2 === 0 ? 1 : -1) * (0.75 + offsetStrength * 2.2);
                 const imageOffsetX = circlePointerX * offsetStrength * 32;
-                const imageOffsetY = circlePointerY * offsetStrength * 26;
+                const imageOffsetY = 0;
 
                 circleMaskCtx.save();
                 circleMaskCtx.translate(centerX + offsetX, centerY + offsetY);
                 circleMaskCtx.rotate(rotation);
+                circleMaskCtx.scale(scale, scale);
                 circleMaskCtx.beginPath();
                 circleMaskCtx.arc(0, 0, radius, 0, Math.PI * 2);
                 if (nextRadius > 0) {
@@ -769,7 +776,7 @@
                 circleMaskCtx.clip('evenodd');
                 circleMaskCtx.translate(-centerX - offsetX + imageOffsetX, -centerY - offsetY + imageOffsetY);
                 circleMaskCtx.globalAlpha = alpha * (0.64 + offsetStrength * 0.28);
-                circleMaskCtx.filter = `contrast(${1.04 + offsetStrength * 0.24}) saturate(${1.02 + offsetStrength * 0.22}) brightness(${1.02 + offsetStrength * 0.08})`;
+                circleMaskCtx.filter = `blur(${circleBlur * offsetStrength * 4}px) contrast(${1.04 + offsetStrength * 0.24}) saturate(${1.02 + offsetStrength * 0.22}) brightness(${1.02 + offsetStrength * 0.08})`;
                 drawImageCover(circleMaskCtx, circleMaskCanvas, image);
                 circleMaskCtx.restore();
             }
@@ -792,7 +799,8 @@
             const rect = circleMaskCanvas.getBoundingClientRect();
             circleTargetX = ((event.clientX - rect.left) / rect.width - 0.5) * 2;
             circleTargetY = ((event.clientY - rect.top) / rect.height - 0.5) * 2;
-            circleSpinTarget = circleTargetX * Math.PI * 0.9 + circleTargetY * Math.PI * 0.45;
+            circleSpinTarget = circleTargetX * Math.PI * 1.1;
+            circleBlurTarget = Math.abs(circleTargetY);
         }
 
         function pseudoNoise(x, y, t) {
@@ -883,7 +891,7 @@
             processingAnimationId = null;
         }
 
-        function switchEntry(entry) {
+        function switchEntry(entry, randomize = false) {
             activeEntry = entry;
             document.body.classList.toggle('entry-001', entry === '001');
             document.body.classList.toggle('entry-002', entry === '002');
@@ -897,11 +905,11 @@
                 revealUnderCanvas.classList.add('active');
                 revealCanvas.classList.add('active');
                 revealCycleIndex = currentImageIndex;
-                prepareRevealStack();
+                prepareRevealStack(randomize);
             } else if (entry === '003') {
                 clearInteractiveLayers();
                 circleMaskCanvas.classList.add('active');
-                prepareCircleMasks();
+                prepareCircleMasks(randomize);
             } else if (entry === '006') {
                 clearInteractiveLayers();
                 processingCanvas.classList.add('active');
@@ -1025,7 +1033,7 @@
 
         journalDots.forEach(dot => {
             dot.addEventListener('click', () => {
-                switchEntry(dot.dataset.entry);
+                switchEntry(dot.dataset.entry, true);
                 playRandomAudioTrack();
             });
         });
