@@ -1299,24 +1299,14 @@
 
         function startRadialLens() {
             if (processingAnimationId) cancelAnimationFrame(processingAnimationId);
-            processingTime = 0;
-            const tick = () => {
-                if (activeEntry !== '006') {
-                    processingAnimationId = null;
-                    return;
-                }
-                processingTime += 0.012;
-                renderRadialLens();
-                processingAnimationId = requestAnimationFrame(tick);
-            };
-            tick();
+            processingAnimationId = null;
+            renderRadialLens();
         }
 
         function renderRadialLens() {
             if (!radialBaseImage || !radialLensImage) return;
             const width = processingCanvas.width;
             const height = processingCanvas.height;
-            const dpr = window.devicePixelRatio || 1;
             processingCtx.clearRect(0, 0, width, height);
 
             processingCtx.save();
@@ -1335,7 +1325,6 @@
             const cx = width * (0.5 + (processingPointerX - 0.5) * 0.18);
             const cy = height * (0.5 + (processingPointerY - 0.5) * 0.18);
             const radius = Math.min(width, height) * 0.34;
-            const pulse = Math.sin(processingTime * 1.7) * 0.018;
 
             processingCtx.save();
             processingCtx.beginPath();
@@ -1348,10 +1337,10 @@
             processingCtx.filter = 'grayscale(1) contrast(1.65) brightness(0.92)';
             processingCtx.globalAlpha = 0.34;
             for (let i = 13; i >= 0; i--) {
-                const scale = 1 + i * 0.042 + pulse;
+                const scale = 1 + i * 0.042;
                 processingCtx.save();
                 processingCtx.translate(cx, cy);
-                processingCtx.rotate((i - 7) * 0.008 + Math.sin(processingTime) * 0.012);
+                processingCtx.rotate((i - 7) * 0.008);
                 processingCtx.translate(-cx, -cy);
                 drawImageCoverScaledFromPoint(processingCtx, processingCanvas, radialLensImage, cx, cy, scale);
                 processingCtx.restore();
@@ -1359,35 +1348,7 @@
 
             processingCtx.globalAlpha = 0.78;
             processingCtx.filter = 'grayscale(1) contrast(1.95) brightness(0.9) blur(0.7px)';
-            processingCtx.save();
-            processingCtx.translate(cx, cy);
-            processingCtx.rotate(Math.sin(processingTime * 0.7) * 0.008);
-            processingCtx.translate(-cx, -cy);
-            drawImageCoverScaledFromPoint(processingCtx, processingCanvas, radialLensImage, cx, cy, 0.98 + pulse);
-            processingCtx.restore();
-
-            processingCtx.filter = 'none';
-            processingCtx.globalCompositeOperation = 'screen';
-            processingCtx.globalAlpha = 0.42;
-            for (let i = 0; i < 62; i++) {
-                const angle = (i / 62) * Math.PI * 2 + processingTime * 0.08;
-                const inner = radius * (0.1 + Math.random() * 0.16);
-                const outer = radius * (0.55 + Math.random() * 0.42);
-                processingCtx.strokeStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.34)' : 'rgba(190,190,190,0.22)';
-                processingCtx.lineWidth = (1 + Math.random() * 3.2) * dpr;
-                processingCtx.beginPath();
-                processingCtx.moveTo(cx + Math.cos(angle) * inner, cy + Math.sin(angle) * inner);
-                processingCtx.lineTo(cx + Math.cos(angle) * outer, cy + Math.sin(angle) * outer);
-                processingCtx.stroke();
-            }
-            processingCtx.restore();
-
-            processingCtx.save();
-            processingCtx.strokeStyle = 'rgba(0, 0, 0, 0.72)';
-            processingCtx.lineWidth = 2 * dpr;
-            processingCtx.beginPath();
-            processingCtx.arc(cx, cy, radius, 0, Math.PI * 2);
-            processingCtx.stroke();
+            drawImageCoverScaledFromPoint(processingCtx, processingCanvas, radialLensImage, cx, cy, 0.98);
             processingCtx.restore();
         }
 
@@ -1396,6 +1357,7 @@
             const rect = processingCanvas.getBoundingClientRect();
             processingPointerX = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
             processingPointerY = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
+            renderRadialLens();
         }
 
         function handleRadialPointerDown(event) {
